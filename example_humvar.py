@@ -1,3 +1,4 @@
+from datetime import datetime
 from itertools import product
 import sys
 
@@ -20,8 +21,11 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 SEED = 5
 N_ITER = 5
 CV_METHOD = lambda target: cross_validation.ShuffleSplit(len(target), n_iter=N_ITER, test_size=0.1, random_state=SEED)
+N_ESTIMATORS = 501
+REPLACE = True
+REPEAT = True
+MAX_FEATURES = 4
 
-N_ESTIMATORS = 201
 VARIANCE_RANGE = numpy.linspace(0.05, 0.15, num=3)
 TRAINING_RANGE = numpy.linspace(0.25, 0.35, num=3)
 # For BestK
@@ -49,7 +53,16 @@ class Logger(object):
 
 
 def main():
-    sys.stdout = Logger('experiments_humvar.txt')
+    sys.stdout = Logger("experiment-humvar-{:%Y%m%d-%H%M}.txt".format(datetime.utcnow()))
+
+    print "Experiment parameters"
+    print "SEED:", SEED
+    print "CV METHOD:", CV_METHOD([])
+    print "N ESTIMATORS:", N_ESTIMATORS
+    print "REPLACE:", REPLACE
+    print "REPEAT:", REPEAT
+    print "MAX_FEATURES:", MAX_FEATURES
+    print "SELECTION STRATEGY:", SELECTION_STRATEGY.__name__
 
     with open('humvar.csv') as f:
         data = pandas.read_csv(f)
@@ -62,7 +75,7 @@ def main():
 
     print "Running Random Forest..."
     cv = CV_METHOD(target)
-    rf = RandomForestClassifier(n_estimators=N_ESTIMATORS, max_features=4, random_state=SEED)
+    rf = RandomForestClassifier(n_estimators=N_ESTIMATORS, max_features=MAX_FEATURES, random_state=SEED)
     score = cross_validation.cross_val_score(rf, data, target, cv=cv)
     print "  RF  : {} - Mean: {:3f}".format(score, score.mean())
 
@@ -75,10 +88,10 @@ def main():
                 splitting_strategy=CentroidBasedSplittingStrategy(
                     variance=variance,
                     train_percent=train_percent,
-                    replace=True,
-                    repeat=True
+                    replace=REPLACE,
+                    repeat=REPEAT
                 ),
-                base_estimator=DecisionTreeClassifier(max_features=4)
+                base_estimator=DecisionTreeClassifier(max_features=MAX_FEATURES)
             ),
             weighting_strategy=CentroidBasedWeightingStrategy(),
             random_state=SEED
