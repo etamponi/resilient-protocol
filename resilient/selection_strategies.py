@@ -10,7 +10,7 @@ class SelectionStrategy(object):
         pass
 
     @abstractmethod
-    def select(self, sorted_classifiers, weights):
+    def select(self, weights):
         pass
 
 
@@ -20,16 +20,6 @@ class SelectBestK(SelectionStrategy):
         super(SelectBestK, self).__init__()
         self.k = k
 
-    def select(self, sorted_classifiers, weights):
-        return sorted_classifiers[:self.k], weights[:self.k]
-
-
-class SelectWithThreshold(SelectionStrategy):
-
-    def __init__(self, threshold=0.5):
-        super(SelectWithThreshold, self).__init__()
-        self.threshold = threshold
-
-    def select(self, sorted_classifiers, weights):
-        weights = [w for w in weights if w >= self.threshold]
-        return sorted_classifiers[:len(weights)], weights
+    def select(self, weights):
+        indices = weights.argsort()[::-1]
+        return indices[:self.k]

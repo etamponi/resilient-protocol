@@ -14,3 +14,7 @@ class Dataset(object):
     @property
     def target(self):
         return self._target
+
+    def __iter__(self):
+        for instance, target in zip(self._data, self._target):
+            yield instance, target
