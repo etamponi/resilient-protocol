@@ -1,3 +1,5 @@
+from itertools import izip
+
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
@@ -16,5 +18,5 @@ class Dataset(object):
         return self._target
 
     def __iter__(self):
-        for instance, target in zip(self._data, self._target):
+        for instance, target in izip(self._data, self._target):
             yield instance, target

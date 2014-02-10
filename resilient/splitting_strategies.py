@@ -5,6 +5,7 @@ import numpy
 from sklearn.cross_validation import Bootstrap, StratifiedShuffleSplit, ShuffleSplit
 
 from resilient.dataset import Dataset
+from resilient.utils import squared_distance
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -55,9 +56,7 @@ class CentroidBasedSplittingStrategy(SplittingStrategy):
         self.repeat = repeat
 
     def iterate(self, n_iter, inp, y, random_state):
-        for mean in self._get_means(inp, n_iter, random_state):
-            p = numpy.array([self._pdf(x, mean) for x in inp])
-            p = p / sum(p)
+        for mean, p in self._get_means_and_p(inp, n_iter, random_state):
             train_indices, test_indices = self._make_indices(len(inp), p, random_state)
             train_data, test_data = inp[train_indices], inp[test_indices]
             train_targ, test_targ = y[train_indices], y[test_indices]
@@ -72,14 +71,16 @@ class CentroidBasedSplittingStrategy(SplittingStrategy):
         return train_indices, test_indices
 
     def _pdf(self, x, mean):
-        distance = numpy.linalg.norm(x - mean)**2
-        return exp(-distance / (2 * self.variance)).real
+        return exp(-squared_distance(x, mean) / (2 * self.variance)).real
 
-    def _get_means(self, inp, n_means, random_state):
-        probs = numpy.ones(inp.shape[0]) / inp.shape[0]
+    def _get_means_and_p(self, inp, n_means, random_state):
+        mean_prob = numpy.ones(inp.shape[0]) / inp.shape[0]
+        p = numpy.zeros(inp.shape[0])
         for i in range(n_means):
-            mean = inp[random_state.choice(len(inp), p=probs)]
-            for j in range(len(probs)):
-                probs[j] *= (1 - self._pdf(inp[j], mean))
-            probs = probs / probs.sum()
-            yield mean
+            mean = inp[random_state.choice(len(inp), p=mean_prob)]
+            for j, x in enumerate(inp):
+                p[j] = self._pdf(x, mean)
+                mean_prob[j] *= (1 - p[j])
+            mean_prob = mean_prob / mean_prob.sum()
+            p = p / p.sum()
+            yield mean, p

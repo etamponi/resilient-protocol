@@ -1,14 +1,14 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
+from sklearn.metrics.metrics import matthews_corrcoef
 from sklearn.tree.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique
 from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
 
 from resilient.selection_strategies import SelectBestK
-from resilient.sorting_strategies import LocalScoreWeightingStrategy
+from resilient.weighting_strategies import LocalScoreWeightingStrategy
 from resilient.splitting_strategies import RandomChoiceSplittingStrategy
-from resilient.wrapper import EstimatorWrapper
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -26,23 +26,23 @@ class TrainingStrategy(object):
         self.base_estimator = base_estimator
         self.splitting_strategy = splitting_strategy
 
-    def train_estimators(self, inp, y, random_state):
+    def train_estimators(self, inp, y, weighting_strategy, random_state):
         classifiers = []
         i = 0
         for l_set, t_set in self.splitting_strategy.iterate(self.n_estimators, inp, y, random_state):
             i += 1
             print "\rTraining", self.n_estimators, "estimators:", i,
-            est = self._make_estimator(random_state, l_set, t_set)
+            est = self._make_estimator(l_set, random_state)
+            weighting_strategy.add_estimator(est, l_set, t_set)
             classifiers.append(est)
         print ""
         return classifiers
 
-    def _make_estimator(self, random_state, train_set, test_set):
+    def _make_estimator(self, train_set, random_state):
         seed = random_state.randint(MAX_INT)
         est = clone(self.base_estimator)
         est.set_params(random_state=check_random_state(seed))
         est.fit(train_set.data, train_set.target)
-        est = EstimatorWrapper(est, train_set, test_set)
         return est
 
 
@@ -73,8 +73,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.classes_, y = unique(y, return_inverse=True)
         self.n_classes_ = len(self.classes_)
         self.random_state_ = check_random_state(self.random_state)
-        self.classifiers_ = self.training_strategy.train_estimators(inp, y, self.random_state_)
-        self.weighting_strategy.prepare(self.classifiers_, self.random_state_)
+        self.weighting_strategy.prepare(inp, y)
+        self.classifiers_ = self.training_strategy.train_estimators(inp, y, self.weighting_strategy, self.random_state_)
         self.precomputed_prob_ = None
         self.precomputed_weights_ = None
         return self
@@ -111,6 +111,12 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             self.precomputed_weights_[i] = self.weighting_strategy.weight_classifiers(x)
             if self.multiply_by_weight:
                 for j in range(len(self.classifiers_)):
-                    self.precomputed_prob_[i, j] *= self.precomputed_weights_[j]
+                    self.precomputed_prob_[i, j] *= self.precomputed_weights_[i][j]
             print "\rComputing", len(inp), "probabilities and weights:", (i+1),
         print ""
+
+    def score(self, X, y, scoring="mcc"):
+        if scoring == "mcc":
+            return matthews_corrcoef(y, self.predict(X))
+        else:
+            return super(ResilientEnsemble, self).score(X, y)

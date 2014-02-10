@@ -11,6 +11,9 @@ class SelectionStrategy(object):
 
     @abstractmethod
     def select(self, weights):
+        """
+        Returns the indices of the corrisponding classifiers, using their weights.
+        """
         pass
 
 
