@@ -5,37 +5,57 @@ import sys
 import arff
 import numpy
 from sklearn import cross_validation, preprocessing
+from sklearn.decomposition import PCA
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique
 
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.logger import Logger
 from resilient.selection_strategies import SelectBestK
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
-from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy, CentroidBasedKNNSplittingStrategy
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
 SEED = 1
-N_ITER = 2
+N_ITER = 1
 CV_METHOD = lambda t: cross_validation.StratifiedShuffleSplit(t, n_iter=N_ITER, test_size=0.1, random_state=SEED)
-#CV_METHOD = lambda t: cross_validation.StratifiedKFold(t, n_folds=N_ITER)
-N_ESTIMATORS = 11
-REPLACE = False
-REPEAT = False
+#CV_METHOD = lambda target: cross_validation.StratifiedKFold(target, n_folds=N_ITER)
+N_ESTIMATORS = 1501
 USE_WEIGHTS = False
-USE_PROB = True
-MAX_FEATURES = 4
+MAX_FEATURES = "log2"
 
-MAX_DEPTH_RANGE = range(10, 41, 10)
-VARIANCE_RANGE = numpy.linspace(0.15, 0.25, num=1)
-TRAINING_RANGE = numpy.linspace(0.35, 0.40, num=1)
+TRAINING_RANGE = numpy.linspace(0.10, 0.30, num=5)
 # For BestK
 SELECTION_STRATEGY = SelectBestK
 TESTING_RANGE = range(1, N_ESTIMATORS+1, 2)
+
+
+class Logger(object):
+    def __init__(self, filename):
+        numpy.set_printoptions(precision=3)
+        self.terminal = sys.stdout
+        self.log = open(filename, "w")
+        self.disable_log = False
+
+    def write(self, message):
+        self.terminal.write(message)
+        if message.startswith("\r"):
+            self.disable_log = True
+        if not self.disable_log:
+            self.log.write(message)
+        if message.endswith("\n") and self.disable_log:
+            self.disable_log = False
+        self.flush()
+
+    def finish(self):
+        sys.stdout = self.terminal
+
+    def flush(self):
+        self.log.flush()
+        self.terminal.flush()
 
 
 def main():
@@ -45,10 +65,7 @@ def main():
     print "SEED:", SEED
     print "CV METHOD:", CV_METHOD([0, 1]*(N_ITER*10))
     print "N ESTIMATORS:", N_ESTIMATORS
-    print "REPLACE:", REPLACE
-    print "REPEAT:", REPEAT
     print "USE WEIGHTS:", USE_WEIGHTS
-    print "USE PROB:", USE_PROB
     print "MAX FEATURES:", MAX_FEATURES
     print "SELECTION STRATEGY:", SELECTION_STRATEGY.__name__
 
@@ -62,7 +79,7 @@ def main():
     target = numpy.array(target)
     classes_, target = unique(target, return_inverse=True)
 
-    #data = PCA().fit_transform(data)
+    #data = PCA(n_components=10, whiten=True).fit_transform(data)
 
     print "Running Random Forest..."
     cv = CV_METHOD(target)
@@ -72,27 +89,21 @@ def main():
 
     data = preprocessing.MinMaxScaler().fit_transform(data)
 
-    for variance, train_percent, max_depth in product(VARIANCE_RANGE, TRAINING_RANGE, MAX_DEPTH_RANGE):
-        print "--------------------------"
-        print "Variance :", variance
-        print "Train    :", train_percent
-        print "Max depth:", max_depth
-        print "--------------------------"
+    for train_percent in TRAINING_RANGE:
+        print "---------"
+        print "Train   :", train_percent
+        print "---------"
         ens = ResilientEnsemble(
             training_strategy=TrainingStrategy(
                 n_estimators=N_ESTIMATORS,
-                splitting_strategy=CentroidBasedPDFSplittingStrategy(
-                    pdf_params=variance,
-                    train_percent=train_percent,
-                    replace=REPLACE,
-                    repeat=REPEAT
+                splitting_strategy=CentroidBasedKNNSplittingStrategy(
+                    train_percent=train_percent
                 ),
-                base_estimator=DecisionTreeClassifier(max_features=MAX_FEATURES, max_depth=max_depth)
+                base_estimator=DecisionTreeClassifier(max_features=MAX_FEATURES)
             ),
             weighting_strategy=CentroidBasedWeightingStrategy(),
-            multiply_by_weight=USE_WEIGHTS,
-            use_prob=USE_PROB,
-            random_state=SEED
+            random_state=SEED,
+            multiply_by_weight=USE_WEIGHTS
         )
 
         cv = CV_METHOD(target)
@@ -113,21 +124,15 @@ def main():
             print ""
         for param in TESTING_RANGE:
             if isinstance(param, int):
-                print "{:6d}: {} - Mean: {:.3f}".format(param, results[param], results[param].mean())
+                print "{:5d}: {} - Mean: {:.3f}".format(param, results[param], results[param].mean())
             else:
-                print "{:6.3f}: {} - Mean: {:.3f}".format(param, results[param], results[param].mean())
+                print "{:.3f}: {} - Mean: {:.3f}".format(param, results[param], results[param].mean())
         best_results = numpy.zeros(N_ITER)
-        best_params = numpy.zeros(N_ITER, dtype=int)
         for i in range(N_ITER):
             result = numpy.array([results[param][i] for param in TESTING_RANGE])
             best_results[i] = result.max()
-            best_params[i] = TESTING_RANGE[result.argmax()]
-        print "Best p: {} - Mean p of bst: {:d}".format(best_params, int(best_params.mean()))
-        print "  Best: {} - Mean of bests: {:.3f}".format(best_results, best_results.mean())
-        mean_results = numpy.array([results[p].mean() for p in TESTING_RANGE])
-        best_mean_param = TESTING_RANGE[mean_results.argmax()]
-        best_mean_r = results[best_mean_param]
-        print "Best m: {} - Best of means: {:.3f} (param {:d})".format(best_mean_r, best_mean_r.mean(), best_mean_param)
+        print "       Best of means: {:.3f}".format(numpy.array([results[p].mean() for p in TESTING_RANGE]).max())
+        print "       Mean of bests: {:.3f}".format(best_results.mean())
 
 
 if __name__ == '__main__':

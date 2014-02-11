@@ -7,8 +7,8 @@ from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
 
 from resilient.selection_strategies import SelectBestK
-from resilient.weighting_strategies import LocalScoreWeightingStrategy
-from resilient.splitting_strategies import RandomChoiceSplittingStrategy
+from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -16,12 +16,12 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 MAX_INT = np.iinfo(np.int32).max
 
 
-class TrainingStrategy(object):
+class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
-                 n_estimators=100,
+                 n_estimators=101,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
-                 splitting_strategy=RandomChoiceSplittingStrategy()):
+                 splitting_strategy=CentroidBasedPDFSplittingStrategy()):
         self.n_estimators = n_estimators
         self.base_estimator = base_estimator
         self.splitting_strategy = splitting_strategy
@@ -50,7 +50,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
     def __init__(self,
                  training_strategy=TrainingStrategy(),
-                 weighting_strategy=LocalScoreWeightingStrategy(),
+                 weighting_strategy=CentroidBasedWeightingStrategy(),
                  selection_strategy=SelectBestK(),
                  multiply_by_weight=False,
                  use_prob=True,
@@ -115,8 +115,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             print "\rComputing", len(inp), "probabilities and weights:", (i+1),
         print ""
 
-    def score(self, X, y, scoring="mcc"):
-        if scoring == "mcc":
+    def score(self, X, y, use_mcc=False):
+        if use_mcc:
             return matthews_corrcoef(y, self.predict(X))
         else:
             return super(ResilientEnsemble, self).score(X, y)
