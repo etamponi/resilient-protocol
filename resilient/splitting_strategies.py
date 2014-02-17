@@ -4,7 +4,7 @@ import scipy.spatial.distance
 from sklearn.base import BaseEstimator
 
 from resilient.dataset import Dataset
-from resilient.pdfs import MultivariateExponential
+from resilient.pdfs import DistanceExponential
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -26,7 +26,7 @@ class SplittingStrategy(BaseEstimator):
 
 class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
 
-    def __init__(self, pdf=MultivariateExponential(), train_percent=0.35, replace=False, repeat=False):
+    def __init__(self, pdf=DistanceExponential(), train_percent=0.35, replace=False, repeat=False):
         self.pdf = pdf
         self.train_percent = train_percent
         self.replace = replace
@@ -51,7 +51,7 @@ class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
             mean = inp[random_state.choice(len(inp), p=mean_prob)]
             probs = self.pdf.probabilities(inp, mean=mean)
             for j, x in enumerate(inp):
-                mean_prob[j] *= scipy.spatial.distance.sqeuclidean(x, mean)
+                mean_prob[j] *= scipy.spatial.distance.euclidean(x, mean)
             mean_prob = mean_prob / mean_prob.sum()
             yield probs
 

@@ -25,4 +25,5 @@ class SelectBestK(SelectionStrategy):
 
     def select(self, weights):
         indices = weights.argsort()
+        # Higher values at the end of the list
         return indices[-self.k:]
