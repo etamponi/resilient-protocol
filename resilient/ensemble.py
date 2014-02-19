@@ -19,19 +19,17 @@ MAX_INT = np.iinfo(np.int32).max
 class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
-                 n_estimators=101,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
                  splitting_strategy=CentroidBasedPDFSplittingStrategy()):
-        self.n_estimators = n_estimators
         self.base_estimator = base_estimator
         self.splitting_strategy = splitting_strategy
 
     def train_estimators(self, inp, y, weighting_strategy, random_state):
         classifiers = []
         i = 0
-        for l_set, t_set in self.splitting_strategy.iterate(self.n_estimators, inp, y, random_state):
+        for l_set, t_set in self.splitting_strategy.iterate(inp, y, random_state):
             i += 1
-            print "\rTraining", self.n_estimators, "estimators:", i,
+            print "\rTraining estimator:", i,
             est = self._make_estimator(l_set, random_state)
             weighting_strategy.add_estimator(est, l_set, t_set)
             classifiers.append(est)
