@@ -1,5 +1,5 @@
 from copy import deepcopy
-from itertools import izip
+from itertools import izip, product
 
 from abc import ABCMeta, abstractmethod
 import numpy
@@ -52,6 +52,7 @@ class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
         return train_indices, test_indices
 
     def _get_probabilities(self, inp, random_state):
+        inp = MinMaxScaler(feature_range=(0, 1)).fit_transform(inp)
         mean_probs = numpy.ones(inp.shape[0]) / inp.shape[0]
         for i in range(self.n_estimators):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]
@@ -99,7 +100,7 @@ class GridSplittingStrategy(SplittingStrategy):
     def iterate(self, inp, y, random_state):
         cells = self._get_cells(inp, y)
         avg = float(sum([len(v[0]) for v in cells.values()])) / len(cells)
-        print "Training", len(cells), "estimators on an average of", avg, "examples"
+        print "\rTraining", len(cells), "estimators on an average of", avg, "examples"
         for source, target in cells.values():
             source, target = numpy.array(source), numpy.array(target)
             yield Dataset(source, target), Dataset(source, target)
@@ -121,7 +122,7 @@ class GridSplittingStrategy(SplittingStrategy):
             cells[other_cell][1].extend(cells[smallest_cell][1])
             del cells[smallest_cell]
             smallest_cell, smallest_size = self._get_smallest_cell(cells)
-        print "\r"
+        print ""
         return self._group_cells(cells)
 
     def _group_cells(self, cells):
@@ -132,16 +133,7 @@ class GridSplittingStrategy(SplittingStrategy):
             for neighbor_code in neighbor_cells:
                 final_cells[cell_code][0].extend(cells[neighbor_code][0])
                 final_cells[cell_code][1].extend(cells[neighbor_code][1])
-        # for cell_code in cells:
-        #     for i, idx in enumerate(cell_code):
-        #         for offset in [-3, -2, -1, 1, 2, 3]:
-        #             other_cell_code = list(cell_code)
-        #             other_cell_code[i] = idx + offset
-        #             other_cell_code = tuple(other_cell_code)
-        #             if other_cell_code in cells:
-        #                 final_cells[cell_code][0].extend(cells[other_cell_code][0])
-        #                 final_cells[cell_code][1].extend(cells[other_cell_code][1])
-        print "\r"
+        print ""
         return final_cells
 
     @staticmethod
@@ -173,3 +165,68 @@ class GridSplittingStrategy(SplittingStrategy):
         cells = list(cells[indices[1:self.k_overlap+1]])
         cells = [tuple(cell) for cell in cells]
         return cells
+
+
+class SquareGridSplittingStrategy(SplittingStrategy):
+
+    def __init__(self, spacing=0.5, overlapping_radius=5, cell_dist_measure=distance.cityblock):
+        self.spacing = spacing
+        self.overlapping_radius = overlapping_radius
+        self.cell_dist_measure = cell_dist_measure
+
+    def iterate(self, inp, y, random_state):
+        cells = self._get_cells(inp, y)
+        neighbors = self._get_neighbors(cells)
+        non_redundant_cells = self._get_non_redundant_cells(cells, neighbors)
+        cells = self._overlap_cells(non_redundant_cells, cells, neighbors)
+        avg = float(sum([len(v[0]) for v in cells.values()])) / len(cells)
+        print "\rTraining", len(cells), "estimators on an average of", avg, "examples"
+        for source, target in cells.values():
+            source, target = numpy.array(source), numpy.array(target)
+            yield Dataset(source, target), Dataset(source, target)
+
+    def _get_cells(self, inp, ys):
+        minimum = numpy.min(inp, axis=0)
+        inp_flt = numpy.zeros_like(inp)
+        for i in xrange(len(inp_flt)):
+            inp_flt[i] = (inp[i] + minimum) / self.spacing
+        cells = {}
+        for x_flt, x, y in izip(inp_flt, inp, ys):
+            code = tuple([int(t) for t in x_flt])
+            if code not in cells:
+                cells[code] = ([], [])
+            cells[code][0].append(x)
+            cells[code][1].append(y)
+        print "\rCells found:", len(cells)
+        return cells
+
+    def _get_neighbors(self, cells):
+        neighbors = {}
+        for i, code in enumerate(cells):
+            print "\rGetting neighbors for cell:", (i+1),
+            neighbors[code] = set()
+            for other_code in cells:
+                dist = self.cell_dist_measure(code, other_code)
+                if dist <= self.overlapping_radius:
+                    neighbors[code].add(other_code)
+        print ""
+        return neighbors
+
+    @staticmethod
+    def _get_non_redundant_cells(cells, neighbors):
+        non_redundant = set(cells)
+        for code, other_code in product(cells, cells):
+            if code != other_code and other_code in non_redundant and neighbors[other_code] <= neighbors[code]:
+                non_redundant.remove(other_code)
+        return non_redundant
+
+    @staticmethod
+    def _overlap_cells(non_redundant, cells, neighbors):
+        expanded_cells = {}
+        for cell in non_redundant:
+            dataset = ([], [])
+            for neighbor in neighbors[cell]:
+                dataset[0].extend(cells[neighbor][0])
+                dataset[1].extend(cells[neighbor][1])
+            expanded_cells[cell] = dataset
+        return expanded_cells

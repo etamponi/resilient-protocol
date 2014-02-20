@@ -1,15 +1,17 @@
-import arff
 import datetime
+
+import arff
 import numpy
-import scipy.spatial.distance
+from scipy.spatial import distance
 from sklearn import cross_validation
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree import DecisionTreeClassifier
-from resilient import pdfs
+
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient import splitting_strategies
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
+
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
@@ -22,39 +24,36 @@ with open("humvar_10fold/humvar_01.arff") as f:
 
 config = {
     "seed": 1,
-    "n_iter": 10,
-    #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
-    "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
-    "dataset_name": "humvar_10",
+    "n_iter": 2,
+    "cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
+    #"cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
+    "dataset_name": "humvar_01",
     "data": data,
     "target": target,
     "pipeline": Pipeline(
         steps=[
-            ("scale", MinMaxScaler())
+            ("scale", MinMaxScaler(feature_range=(0, 1)))
         ]
     ),
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
-            n_estimators=301,
             base_estimator=DecisionTreeClassifier(
                 max_features=4,
-                max_depth=20
+                max_depth=None,
+                criterion="entropy"
             ),
-            splitting_strategy=CentroidBasedPDFSplittingStrategy(
-                pdf=pdfs.DistanceExponential(
-                    tau=0.15,
-                    dist_measure=scipy.spatial.distance.euclidean
-                ),
-                train_percent=0.90,
-                replace=True,
-                repeat=True
+            splitting_strategy=splitting_strategies.SquareGridSplittingStrategy(
+                spacing=0.5,
+                overlapping_radius=4,
+                cell_dist_measure=distance.cityblock
             )
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
-            dist_measure=scipy.spatial.distance.euclidean
+            dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True
     ),
-    "log_filename": "results/experiment-{:%Y%m%d-%H%M-%S}.txt".format(datetime.datetime.utcnow())
+    "log_filename": "results/experiment-humvar-square-grid-{:%Y%m%d-%H%M-%S}.txt".format(datetime.datetime.utcnow()),
+    "rf_trees": None
 }
