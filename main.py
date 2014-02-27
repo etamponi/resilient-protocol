@@ -4,5 +4,5 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
 if __name__ == "__main__":
-    from experiments import humvar_square_grid_config as cfg
+    from experiments import humvar_centroid_config as cfg
     experiment.run_experiment(**cfg.config)

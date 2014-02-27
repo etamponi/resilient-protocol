@@ -1,5 +1,7 @@
 from itertools import izip
-from sklearn.utils.validation import array2d
+
+from sklearn.utils.validation import array2d, safe_asarray
+
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
@@ -8,7 +10,7 @@ class Dataset(object):
 
     def __init__(self, inp, y):
         self._data = array2d(inp)
-        self._target = y
+        self._target = safe_asarray(y)
 
     @property
     def data(self):

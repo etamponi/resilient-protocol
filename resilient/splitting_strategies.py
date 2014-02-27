@@ -1,7 +1,8 @@
+from cmath import log
 from copy import deepcopy
 from itertools import izip, product
-
 from abc import ABCMeta, abstractmethod
+
 import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
@@ -52,13 +53,13 @@ class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
         return train_indices, test_indices
 
     def _get_probabilities(self, inp, random_state):
-        inp = MinMaxScaler(feature_range=(0, 1)).fit_transform(inp)
+        #inp = MinMaxScaler(feature_range=(0, 1)).fit_transform(inp)
         mean_probs = numpy.ones(inp.shape[0]) / inp.shape[0]
         for i in range(self.n_estimators):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]
             probs = self.pdf.probabilities(inp, mean=mean)
             for j, x in enumerate(inp):
-                mean_probs[j] *= distance.euclidean(x, mean)
+                mean_probs[j] *= log(1 + distance.euclidean(x, mean)).real
             mean_probs = mean_probs / mean_probs.sum()
             yield probs
 
@@ -185,14 +186,17 @@ class SquareGridSplittingStrategy(SplittingStrategy):
             source, target = numpy.array(source), numpy.array(target)
             yield Dataset(source, target), Dataset(source, target)
 
-    def _get_cells(self, inp, ys):
-        minimum = numpy.min(inp, axis=0)
-        inp_flt = numpy.zeros_like(inp)
-        for i in xrange(len(inp_flt)):
-            inp_flt[i] = (inp[i] + minimum) / self.spacing
+    @staticmethod
+    def _get_cells(inp, ys):
+        # minimum = numpy.min(inp, axis=0)
+        # inp_flt = numpy.zeros_like(inp)
+        # for i in xrange(len(inp_flt)):
+        #     inp_flt[i] = (inp[i] + minimum) / self.spacing
         cells = {}
-        for x_flt, x, y in izip(inp_flt, inp, ys):
-            code = tuple([int(t) for t in x_flt])
+        # for x_flt, x, y in izip(inp_flt, inp, ys):
+        #     code = tuple([floor(t) for t in x_flt])
+        for x, y in izip(inp, ys):
+            code = tuple([int(t) for t in x])
             if code not in cells:
                 cells[code] = ([], [])
             cells[code][0].append(x)
@@ -206,8 +210,8 @@ class SquareGridSplittingStrategy(SplittingStrategy):
             print "\rGetting neighbors for cell:", (i+1),
             neighbors[code] = set()
             for other_code in cells:
-                dist = self.cell_dist_measure(code, other_code)
-                if dist <= self.overlapping_radius:
+                d = self.cell_dist_measure(code, other_code)
+                if d <= self.overlapping_radius:
                     neighbors[code].add(other_code)
         print ""
         return neighbors

@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
+
 import numpy
 import scipy.spatial.distance
 from sklearn.base import BaseEstimator
+
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
@@ -39,3 +41,9 @@ class DistanceExponential(PDF):
 
     def probability(self, x, mean=None):
         return 2**(-self.dist_measure(x, mean) / self.tau)
+
+
+class Uniform(PDF):
+
+    def probability(self, x, **runtime_args):
+        return 1.0

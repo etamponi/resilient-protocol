@@ -4,9 +4,9 @@ import arff
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
+from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.tree import DecisionTreeClassifier
 
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient import splitting_strategies
@@ -37,14 +37,13 @@ config = {
     ),
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
-            base_estimator=DecisionTreeClassifier(
-                max_features=4,
-                max_depth=None,
-                criterion="entropy"
+            base_estimator=RandomForestClassifier(
+                n_estimators=20,
+                max_features=4
             ),
             splitting_strategy=splitting_strategies.SquareGridSplittingStrategy(
-                spacing=0.5,
-                overlapping_radius=4,
+                spacing=0.8,
+                overlapping_radius=2,
                 cell_dist_measure=distance.cityblock
             )
         ),

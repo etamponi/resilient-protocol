@@ -1,12 +1,13 @@
 from abc import ABCMeta, abstractmethod
+
 from numpy.core.numeric import asarray
 from numpy.core.umath import sign
-
 import numpy as np
 import scipy.spatial.distance
 from sklearn.base import BaseEstimator
 from sklearn.metrics.metrics import accuracy_score
 from sklearn.utils.validation import array2d
+
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 

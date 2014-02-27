@@ -5,6 +5,7 @@ from sklearn.tree.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique
 from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
+from sklearn.utils.validation import array2d
 
 from resilient.selection_strategies import SelectBestK
 from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
@@ -80,11 +81,12 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
     def predict_proba(self, inp):
         # inp is array-like, (N, D), one instance per row
         # output is array-like, (N, n_classes_), each row sums to one
+        inp = array2d(inp)
         if self.precomputed_prob_ is None:
             self._precompute(inp)
         prob = np.zeros((len(inp), self.n_classes_))
         for i in range(len(inp)):
-            active_indices = self.selection_strategy.select(self.precomputed_weights_[i])
+            active_indices = self.selection_strategy.get_indices(self.precomputed_weights_[i])
             prob[i] = self.precomputed_prob_[i][active_indices].sum(axis=0)
         preprocessing.normalize(prob, norm='l1', copy=False)
         return prob

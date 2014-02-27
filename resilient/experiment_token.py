@@ -1,12 +1,12 @@
 import sys
 
 import numpy
-from sklearn.base import clone
+from numpy.core.function_base import linspace
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
-from resilient.selection_strategies import SelectBestK
+from resilient import selection_strategies
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -40,8 +40,6 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     print ensemble
     print HORIZ_LINE
 
-    original = clone(ensemble)
-
     # results is a dictionary with k as key and a vector as value, containing the result for that k on each iteration
     results = {}
     rf_scores = numpy.zeros(n_iter)
@@ -51,14 +49,11 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
         print "\rRunning", (it+1), "iteration..."
         train_data, train_target = flt_data[train_indices], target[train_indices]
         test_data, test_target = flt_data[test_indices], target[test_indices]
-        ensemble = clone(original)
         ensemble.fit(train_data, train_target)
-        n_estimators = len(ensemble.classifiers_)
-        k_range = range(1, n_estimators+1, 2)
-        if k_range[-1] < n_estimators:
-            k_range.append(n_estimators)
+
+        k_range = linspace(0, 1, num=101)[1:]
         for k in k_range:
-            ensemble.set_params(selection_strategy=SelectBestK(k))
+            ensemble.set_params(selection_strategy=selection_strategies.SelectByWeightSum(k))
             if k not in results:
                 results[k] = numpy.zeros(n_iter)
             results[k][it] = ensemble.score(test_data, test_target)
@@ -73,22 +68,22 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
             ).fit(train_data, train_target)
             rf_scores[it] = rf.score(test_data, test_target)  # matthews_corrcoef(rf.predict(test_data), test_target)
     for k in sorted(results.keys()):
-        print "{:6d}: {} - Mean: {:.3f}".format(k, results[k], results[k].mean())
+        print "{:6.3f}: {} - Mean: {:.3f}".format(k, results[k], results[k].mean())
 
     best_result_per_iter = numpy.zeros(n_iter)
-    best_k_per_iter = numpy.zeros(n_iter, dtype=int)
+    best_k_per_iter = numpy.zeros(n_iter)
     for it in range(n_iter):
         iter_results = numpy.array([results[k][it] for k in k_range])
         best_result_per_iter[it] = iter_results.max()
         best_k_per_iter[it] = k_range[iter_results.argmax()]
-    print "Best k: {} - Mean of best k: {:d}".format(best_k_per_iter, int(best_k_per_iter.mean()))
+    print "Best k: {} - Mean of best k: {:.3f}".format(best_k_per_iter, best_k_per_iter.mean())
     print "Best r: {} - Mean of best r: {:.3f}".format(best_result_per_iter, best_result_per_iter.mean())
 
     mean_result_per_k = numpy.array([results[k].mean() for k in k_range])
     k_of_best_mean = k_range[mean_result_per_k.argmax()]
     best_mean_result = results[k_of_best_mean]
     best_mean = best_mean_result.mean()
-    print "Best m: {} - Best of means : {:.3f} (k = {:d})".format(best_mean_result, best_mean, k_of_best_mean)
+    print "Best m: {} - Best of means : {:.3f} (k = {:.3f})".format(best_mean_result, best_mean, k_of_best_mean)
     if rf_trees is not None:
         print "  RF  : {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
 
