@@ -16,12 +16,12 @@ HORIZ_LINE = "-" * 60
 
 
 def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, log_filename, rf_trees):
-    sys.stdout = Logger("results/token/" + log_filename)
+    sys.stdout = Logger("results/threshold/" + log_filename)
 
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
 
-    ensemble.set_params(random_state=seed, selection_strategy=selection_strategies.SelectByWeightSum())
+    ensemble.set_params(random_state=seed, selection_strategy=selection_strategies.SelectByThreshold())
 
     print HORIZ_LINE
     print "Experiment file:", log_filename
@@ -57,7 +57,7 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
 
         k_range = linspace(0, 1, num=501)[1:]
         for k in k_range:
-            ensemble.set_params(selection_strategy=selection_strategies.SelectByWeightSum(k))
+            ensemble.set_params(selection_strategy=selection_strategies.SelectByThreshold(k))
             if k not in results:
                 results[k] = numpy.zeros(n_iter)
             results[k][it] = ensemble.score(test_data, test_target)

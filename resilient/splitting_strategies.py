@@ -2,11 +2,13 @@ from cmath import log
 from copy import deepcopy
 from itertools import izip, product
 from abc import ABCMeta, abstractmethod
+from math import floor
 
 import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
 from sklearn.preprocessing.data import MinMaxScaler
+from sklearn.utils.validation import array2d
 
 from resilient.dataset import Dataset
 from resilient.pdfs import DistanceExponential
@@ -40,20 +42,17 @@ class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
 
     def iterate(self, inp, y, random_state):
         print "\rTraining", self.n_estimators, "estimators..."
-        for probs in self._get_probabilities(inp, random_state):
-            train_indices, test_indices = self._make_indices(len(inp), probs, random_state)
-            yield self._make_datasets(inp, y, train_indices, test_indices)
+        for probs, centroid in self._get_probabilities(inp, random_state):
+            train_indices = self._make_indices(len(inp), probs, random_state)
+            yield self._make_datasets(inp, y, train_indices, train_indices), centroid
 
-    def _make_indices(self, l, pdf, random_state):
-        train_indices = random_state.choice(l, size=int(self.train_percent*l), p=pdf, replace=self.replace)
+    def _make_indices(self, l, probs, random_state):
+        train_indices = random_state.choice(l, size=int(self.train_percent*l), p=probs, replace=self.replace)
         if not self.repeat:
             train_indices = numpy.unique(train_indices)
-        test_indices = numpy.ones(l, dtype=bool)
-        test_indices[train_indices] = False
-        return train_indices, test_indices
+        return train_indices
 
     def _get_probabilities(self, inp, random_state):
-        #inp = MinMaxScaler(feature_range=(0, 1)).fit_transform(inp)
         mean_probs = numpy.ones(inp.shape[0]) / inp.shape[0]
         for i in range(self.n_estimators):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]
@@ -61,7 +60,7 @@ class CentroidBasedPDFSplittingStrategy(SplittingStrategy):
             for j, x in enumerate(inp):
                 mean_probs[j] *= log(1 + distance.euclidean(x, mean)).real
             mean_probs = mean_probs / mean_probs.sum()
-            yield probs
+            yield probs, mean
 
 
 class CentroidBasedKNNSplittingStrategy(SplittingStrategy):
@@ -75,8 +74,8 @@ class CentroidBasedKNNSplittingStrategy(SplittingStrategy):
         k = int(self.train_percent * len(inp))
         for distances in self._get_distances(inp, random_state):
             indices = distances.argsort()
-            train_indices, test_indices = indices[:k], indices[k:]
-            yield self._make_datasets(inp, y, train_indices, test_indices)
+            train_indices = indices[:k]
+            yield self._make_datasets(inp, y, train_indices, train_indices)
 
     def _get_distances(self, inp, random_state):
         mean_probs = numpy.ones(inp.shape[0]) / inp.shape[0]
@@ -103,7 +102,7 @@ class GridSplittingStrategy(SplittingStrategy):
         avg = float(sum([len(v[0]) for v in cells.values()])) / len(cells)
         print "\rTraining", len(cells), "estimators on an average of", avg, "examples"
         for source, target in cells.values():
-            source, target = numpy.array(source), numpy.array(target)
+            source, target = array2d(source), numpy.array(target)
             yield Dataset(source, target), Dataset(source, target)
 
     def _get_cells(self, inp, y):
@@ -183,20 +182,14 @@ class SquareGridSplittingStrategy(SplittingStrategy):
         avg = float(sum([len(v[0]) for v in cells.values()])) / len(cells)
         print "\rTraining", len(cells), "estimators on an average of", avg, "examples"
         for source, target in cells.values():
-            source, target = numpy.array(source), numpy.array(target)
+            source, target = array2d(source), numpy.array(target)
             yield Dataset(source, target), Dataset(source, target)
 
-    @staticmethod
-    def _get_cells(inp, ys):
-        # minimum = numpy.min(inp, axis=0)
-        # inp_flt = numpy.zeros_like(inp)
-        # for i in xrange(len(inp_flt)):
-        #     inp_flt[i] = (inp[i] + minimum) / self.spacing
+    def _get_cells(self, inp, ys):
+        inp_flt = inp / self.spacing
         cells = {}
-        # for x_flt, x, y in izip(inp_flt, inp, ys):
-        #     code = tuple([floor(t) for t in x_flt])
-        for x, y in izip(inp, ys):
-            code = tuple([int(t) for t in x])
+        for x_flt, x, y in izip(inp_flt, inp, ys):
+            code = tuple([floor(t) for t in x_flt])
             if code not in cells:
                 cells[code] = ([], [])
             cells[code][0].append(x)
@@ -234,3 +227,44 @@ class SquareGridSplittingStrategy(SplittingStrategy):
                 dataset[1].extend(cells[neighbor][1])
             expanded_cells[cell] = dataset
         return expanded_cells
+
+
+class GridPDFSplittingStrategy(SplittingStrategy):
+
+    def __init__(self, n_estimators=None, spacing=0.5, pdf=DistanceExponential(),
+                 train_percent=1.0, replace=True, repeat=True):
+        self.n_estimators = n_estimators
+        self.spacing = spacing
+        self.pdf = pdf
+        self.train_percent = train_percent
+        self.replace = replace
+        self.repeat = repeat
+
+    def iterate(self, inp, y, random_state):
+        cells = self._get_cells(inp)
+        for probs, centroid in self._get_probabilities(inp, cells, random_state):
+            train_indices = self._make_indices(len(inp), probs, random_state)
+            yield self._make_datasets(inp, y, train_indices, train_indices), centroid
+
+    def _get_cells(self, inp):
+        cells = set([])
+        for x in inp:
+            code = tuple([floor(t / self.spacing) for t in x])
+            cells.add(code)
+        print "Cells found:", len(cells)
+        return list(cells)
+
+    def _get_probabilities(self, inp, cells, random_state):
+        cells = random_state.permutation(cells)
+        if self.n_estimators is not None and self.n_estimators < len(cells):
+            cells = cells[:self.n_estimators]
+        for cell in cells:
+            mean = (numpy.array(cell) + 0.5) * self.spacing
+            probs = self.pdf.probabilities(inp, mean=mean)
+            yield probs, mean
+
+    def _make_indices(self, l, probs, random_state):
+        train_indices = random_state.choice(l, size=int(self.train_percent*l), p=probs, replace=self.replace)
+        if not self.repeat:
+            train_indices = numpy.unique(train_indices)
+        return train_indices

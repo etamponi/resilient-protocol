@@ -66,15 +66,19 @@ class LocalScoreWeightingStrategy(WeightingStrategy):
 
 class CentroidBasedWeightingStrategy(WeightingStrategy):
 
-    def __init__(self, dist_measure=scipy.spatial.distance.euclidean):
+    def __init__(self, dist_measure=scipy.spatial.distance.euclidean, use_real_centroid=True):
         self.dist_measure = dist_measure
+        self.use_real_centroid = use_real_centroid
         self.centroids_ = None
 
     def prepare(self, inp, y):
         self.centroids_ = []
 
     def add_estimator(self, est, train_set, test_set):
-        self.centroids_.append(train_set.data.mean(axis=0))
+        if self.use_real_centroid:
+            self.centroids_.append(train_set.data.mean(axis=0))
+        else:
+            self.centroids_.append(est.centroid_)
 
     def weight_classifiers(self, x):
         scores = np.array([1 / self.dist_measure(x, centroid) for centroid in self.centroids_])

@@ -16,12 +16,12 @@ HORIZ_LINE = "-" * 60
 
 
 def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, log_filename, rf_trees):
-    sys.stdout = Logger(log_filename)
+    sys.stdout = Logger("results/k/" + log_filename)
 
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
 
-    ensemble.set_params(random_state=seed)
+    ensemble.set_params(random_state=seed, selection_strategy=SelectBestK())
 
     print HORIZ_LINE
     print "Experiment file:", log_filename
@@ -43,6 +43,8 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     original = clone(ensemble)
 
     # results is a dictionary with k as key and a vector as value, containing the result for that k on each iteration
+    results_opt = numpy.zeros(n_iter)
+    opt_k = numpy.zeros(n_iter, dtype=int)
     results = {}
     rf_scores = numpy.zeros(n_iter)
     it = -1
@@ -53,6 +55,9 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
         test_data, test_target = flt_data[test_indices], target[test_indices]
         ensemble = clone(original)
         ensemble.fit(train_data, train_target)
+        results_opt[it] = ensemble.score(test_data, test_target)
+        opt_k[it] = ensemble.selection_strategy.k
+
         n_estimators = len(ensemble.classifiers_)
         k_range = range(1, n_estimators+1, 2)
         if k_range[-1] < n_estimators:
@@ -81,14 +86,19 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
         iter_results = numpy.array([results[k][it] for k in k_range])
         best_result_per_iter[it] = iter_results.max()
         best_k_per_iter[it] = k_range[iter_results.argmax()]
+    print HORIZ_LINE
     print "Best k: {} - Mean of best k: {:d}".format(best_k_per_iter, int(best_k_per_iter.mean()))
     print "Best r: {} - Mean of best r: {:.3f}".format(best_result_per_iter, best_result_per_iter.mean())
-
+    print HORIZ_LINE
+    print "Opt k : {} - Mean of opt k : {:.3f}".format(opt_k, opt_k.mean())
+    print "Opt r : {} - Mean of opt r : {:.3f}".format(results_opt, results_opt.mean())
+    print HORIZ_LINE
     mean_result_per_k = numpy.array([results[k].mean() for k in k_range])
     k_of_best_mean = k_range[mean_result_per_k.argmax()]
     best_mean_result = results[k_of_best_mean]
     best_mean = best_mean_result.mean()
     print "Best m: {} - Best of means : {:.3f} (k = {:d})".format(best_mean_result, best_mean, k_of_best_mean)
+    print HORIZ_LINE
     if rf_trees is not None:
         print "  RF  : {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
 

@@ -10,7 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 from resilient import pdfs
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient.splitting_strategies import GridPDFSplittingStrategy
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -48,13 +48,14 @@ config = {
                 bootstrap=False,
                 max_depth=20
             ),
-            splitting_strategy=CentroidBasedPDFSplittingStrategy(
-                n_estimators=21,
+            splitting_strategy=GridPDFSplittingStrategy(
+                n_estimators=51,
+                spacing=0.5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                train_percent=1.0,
+                train_percent=2.0,
                 replace=True,
                 repeat=True
             )
@@ -65,8 +66,8 @@ config = {
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0
+        validation_percent=0.05
     ),
-    "log_filename": "experiment-humvar-{:02d}-centroid-{:%Y%m%d-%H%M-%S}.txt".format(x, datetime.utcnow()),
+    "log_filename": "experiment-humvar-{:02d}-gridpdf-{:%Y%m%d-%H%M-%S}.txt".format(x, datetime.utcnow()),
     "rf_trees": None
 }
