@@ -1,3 +1,4 @@
+import os
 import sys
 
 import numpy
@@ -26,8 +27,14 @@ class Logger(object):
 
     def finish(self):
         sys.stdout = self.terminal
+        self._ensure_dir()
         with open(self.log_file, "w") as f:
             f.write(self.log_string)
 
     def flush(self):
         self.terminal.flush()
+
+    def _ensure_dir(self):
+        d = os.path.dirname(self.log_file)
+        if not os.path.exists(d):
+            os.makedirs(d)

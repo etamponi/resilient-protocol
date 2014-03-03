@@ -85,13 +85,15 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.weighting_strategy.prepare(train_inp, train_y)
         self.classifiers_ = self.training_strategy.train_estimators(train_inp, train_y,
                                                                     self.weighting_strategy, random_state)
-        if self.validation_percent > 0.0:
-            valid_indices = np.ones(len(inp), dtype=bool)
-            valid_indices[train_indices] = False
-        else:
-            valid_indices = train_indices
-        valid_inp, valid_y = inp[valid_indices], y[valid_indices]
-        self.selection_strategy.optimize(self, valid_inp, valid_y)
+
+        if self.validation_percent is not None:
+            if self.validation_percent > 0.0:
+                valid_indices = np.ones(len(inp), dtype=bool)
+                valid_indices[train_indices] = False
+            else:
+                valid_indices = train_indices
+            valid_inp, valid_y = inp[valid_indices], y[valid_indices]
+            self.selection_strategy.optimize(self, valid_inp, valid_y)
 
         # Reset it to null because the previous line uses self.predict
         self.precomputed_probs_ = None

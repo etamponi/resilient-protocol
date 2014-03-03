@@ -1,14 +1,14 @@
-from datetime import datetime
-
 import arff
+
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
 
-from resilient import pdfs
+from resilient import pdfs, selection_strategies
+
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.splitting_strategies import GridPDFSplittingStrategy
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
@@ -17,7 +17,6 @@ from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 x = 1
-
 with open("humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
@@ -35,7 +34,7 @@ config = {
     "target": target,
     "pipeline": Pipeline(
         steps=[
-            ("scale", MinMaxScaler())
+            ("scale", preprocessing.MinMaxScaler())
         ]
     ),
     # "pipeline": None,
@@ -49,7 +48,7 @@ config = {
                 max_depth=20
             ),
             splitting_strategy=GridPDFSplittingStrategy(
-                n_estimators=51,
+                n_estimators=11,
                 spacing=0.5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
@@ -68,6 +67,9 @@ config = {
         use_prob=True,
         validation_percent=0.05
     ),
-    "log_filename": "experiment-humvar-{:02d}-gridpdf-{:%Y%m%d-%H%M-%S}.txt".format(x, datetime.utcnow()),
-    "rf_trees": None
+    "selection_strategy": selection_strategies.SelectByWeightSum(
+        param=0.10,
+        kernel=numpy.ones(5)
+    ),
+    "rf": None
 }

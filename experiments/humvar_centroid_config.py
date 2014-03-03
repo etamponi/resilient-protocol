@@ -8,7 +8,7 @@ from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from resilient import pdfs
+from resilient import pdfs, selection_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
@@ -67,6 +67,9 @@ config = {
         use_prob=True,
         validation_percent=0
     ),
-    "log_filename": "experiment-humvar-{:02d}-centroid-{:%Y%m%d-%H%M-%S}.txt".format(x, datetime.utcnow()),
-    "rf_trees": None
+    "selection_strategy": selection_strategies.SelectBestK(
+        param=10,
+        kernel=numpy.ones(5)
+    ),
+    "rf": None
 }
