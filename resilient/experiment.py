@@ -3,6 +3,7 @@ import sys
 
 import numpy
 from numpy.core.fromnumeric import transpose
+from sklearn import clone
 from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
@@ -85,7 +86,7 @@ def run_experiment(dataset_name, data, target,
         print "\rRunning", (it+1), "iteration..."
         train_data, train_target = flt_data[train_indices], target[train_indices]
         test_data, test_target = flt_data[test_indices], target[test_indices]
-        ensemble.set_params(selection_strategy=selection_strategy)
+        ensemble.set_params(selection_strategy=clone(selection_strategy))
         ensemble.fit(train_data, train_target)
         scores_opt[it] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         params_opt[it] = ensemble.selection_strategy.param

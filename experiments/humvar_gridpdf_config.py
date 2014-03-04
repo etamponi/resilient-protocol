@@ -55,11 +55,11 @@ config = {
                 max_depth=20
             ),
             train_set_generator=GridPDFTrainSetGenerator(
-                n_estimators=51,
+                n_estimators=81,
                 spacing=0.5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
-                    dist_measure=distance.euclidean
+                    dist_measure=mahalanobis_distance
                 ),
                 percent=2.0,
                 replace=True,
@@ -67,7 +67,7 @@ config = {
             )
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
-            dist_measure=distance.euclidean
+            dist_measure=mahalanobis_distance
         ),
         multiply_by_weight=False,
         use_prob=True,

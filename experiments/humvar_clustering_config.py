@@ -66,8 +66,8 @@ config = {
         use_prob=True,
         validation_percent=0.05
     ),
-    "selection_strategy": selection_strategies.SelectByWeightSum(
-        param=0.1,
+    "selection_strategy": selection_strategies.SelectBestK(
+        param=10,
         kernel=numpy.ones(5)/5
     ),
     "rf": None,
