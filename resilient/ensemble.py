@@ -47,17 +47,22 @@ class TrainingStrategy(BaseEstimator):
         return est
 
     def _get_train_validation_split(self, inp, y, train_indices, random_state):
-        unique_indices = np.unique(train_indices)
         if self.validation_percent is not None:
+            unique_indices = np.unique(train_indices)
             valid_indices = random_state.choice(len(unique_indices),
                                                 size=(len(unique_indices)*self.validation_percent), replace=False)
             new_train_indices = []
+            new_valid_indices = []
             for i in train_indices:
                 if i not in valid_indices:
                     new_train_indices.append(i)
-            return Dataset(inp[new_train_indices], y[new_train_indices]), Dataset(inp[valid_indices], y[valid_indices])
+                else:
+                    new_valid_indices.append(i)
+            train_set = Dataset(inp[new_train_indices], y[new_train_indices])
+            valid_set = Dataset(inp[new_valid_indices], y[new_valid_indices])
+            return train_set, valid_set
         else:
-            return Dataset(inp[train_indices], y[train_indices]), Dataset(inp[unique_indices], y[unique_indices])
+            return Dataset(inp[train_indices], y[train_indices]), Dataset(inp[train_indices], y[train_indices])
 
 
 class ResilientEnsemble(BaseEstimator, ClassifierMixin):

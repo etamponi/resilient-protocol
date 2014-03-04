@@ -63,7 +63,7 @@ config = {
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=None
+        validation_percent=0.05
     ),
     "selection_strategy": selection_strategies.SelectBestK(
         param=10,
