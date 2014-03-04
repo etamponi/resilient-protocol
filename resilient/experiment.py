@@ -7,6 +7,7 @@ from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
+from resilient.selection_strategies import SelectBestK
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -33,11 +34,12 @@ def format_param(param):
 def run_experiment(dataset_name, data, target,
                    pipeline, ensemble, selection_strategy,
                    cv_method, n_iter, seed, rf, use_mcc):
-    log_filename = "../results/{}/{}_{}_{:%Y%m%d-%H%M-%S}.txt".format(
-        selection_strategy.__class__.__name__,
-        dataset_name,
-        "mcc" if use_mcc else "acc",
-        datetime.utcnow()
+    log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}.txt".format(
+        generator=ensemble.training_strategy.train_set_generator.__class__.__name__,
+        selection=selection_strategy.__class__.__name__,
+        dataset=dataset_name,
+        metric="mcc" if use_mcc else "acc",
+        date=datetime.utcnow()
     )
     sys.stdout = Logger(log_filename)
 
@@ -69,7 +71,10 @@ def run_experiment(dataset_name, data, target,
 
     # results is a dictionary with k as key and a vector as value, containing the result for that k on each iteration
     scores_opt = numpy.zeros(n_iter)
-    params_opt = numpy.zeros(n_iter)
+    if selection_strategy.__class__ == SelectBestK:
+        params_opt = numpy.zeros(n_iter, dtype=int)
+    else:
+        params_opt = numpy.zeros(n_iter)
 
     re_scores = []
     re_params = []

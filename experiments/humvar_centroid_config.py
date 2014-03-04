@@ -45,13 +45,12 @@ config = {
                 n_estimators=21,
                 max_features=4,
                 criterion="entropy",
-                bootstrap=False,
-                max_depth=20
+                bootstrap=False
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=21,
+                n_estimators=81,
                 pdf=pdfs.DistanceExponential(
-                    tau=0.25,
+                    tau=0.30,
                     dist_measure=distance.euclidean
                 ),
                 percent=1.0,
@@ -64,11 +63,11 @@ config = {
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0
+        validation_percent=None
     ),
     "selection_strategy": selection_strategies.SelectBestK(
         param=10,
-        kernel=numpy.ones(5)
+        kernel=numpy.ones(5)/5
     ),
     "rf": None,
     "use_mcc": False

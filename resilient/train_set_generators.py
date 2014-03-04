@@ -5,6 +5,7 @@ from math import floor
 import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
+from sklearn.cluster.k_means_ import MiniBatchKMeans
 
 from resilient.pdfs import DistanceExponential
 
@@ -79,10 +80,40 @@ class GridPDFTrainSetGenerator(TrainSetGenerator):
         cells = random_state.permutation(cells)
         if self.n_estimators is not None and self.n_estimators < len(cells):
             cells = cells[:self.n_estimators]
+        print "\rTraining", len(cells), "estimators..."
         for cell in cells:
             mean = (numpy.array(cell) + 0.5) * self.spacing
             probs = self.pdf.probabilities(inp, mean=mean)
             yield probs
+
+    def _make_indices(self, size, probs, random_state):
+        indices = random_state.choice(size, size=int(self.percent*size), p=probs, replace=self.replace)
+        if not self.repeat:
+            indices = numpy.unique(indices)
+        return indices
+
+
+class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
+
+    def __init__(self, clustering=MiniBatchKMeans(n_clusters=51),
+                 pdf=DistanceExponential(), percent=1.0, replace=True, repeat=True):
+        self.clustering = clustering
+        self.pdf = pdf
+        self.percent = percent
+        self.replace = replace
+        self.repeat = repeat
+
+    def get_indices(self, inp, y, random_state):
+        self.clustering.set_params(random_state=random_state)
+        self.clustering.fit(inp)
+        for probs in self._get_probabilities(inp):
+            yield self._make_indices(len(inp), probs, random_state)
+
+    def _get_probabilities(self, inp):
+        centroids = self.clustering.cluster_centers_
+        print "\rTraining", len(centroids), "estimators..."
+        for centroid in centroids:
+            yield self.pdf.probabilities(inp, mean=centroid)
 
     def _make_indices(self, size, probs, random_state):
         indices = random_state.choice(size, size=int(self.percent*size), p=probs, replace=self.replace)

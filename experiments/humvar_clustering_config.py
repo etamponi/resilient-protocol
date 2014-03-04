@@ -2,32 +2,25 @@ import arff
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
-from sklearn.covariance.empirical_covariance_ import EmpiricalCovariance
+from sklearn.cluster.k_means_ import MiniBatchKMeans
 from sklearn.ensemble.forest import RandomForestClassifier
-from sklearn import preprocessing
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
 
 from resilient import pdfs, selection_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.train_set_generators import GridPDFTrainSetGenerator
+from resilient.train_set_generators import ClusteringPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 x = 1
+
 with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
-
-    data = preprocessing.MinMaxScaler().fit_transform(data)
-
-
-precision = EmpiricalCovariance(store_precision=True, assume_centered=False).fit(data).get_precision()
-
-
-def mahalanobis_distance(a, b):
-    return distance.mahalanobis(a, b, VI=precision)
 
 
 config = {
@@ -39,29 +32,29 @@ config = {
     "dataset_name": "humvar_{:02d}".format(x),
     "data": data,
     "target": target,
-    # "pipeline": Pipeline(
-    #     steps=[
-    #         ("scale", preprocessing.MinMaxScaler())
-    #     ]
-    # ),
-    "pipeline": None,
+    "pipeline": Pipeline(
+        steps=[
+            ("scale", MinMaxScaler())
+        ]
+    ),
+    # "pipeline": None,
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
                 n_estimators=21,
                 max_features=4,
                 criterion="entropy",
-                bootstrap=False,
-                max_depth=20
+                bootstrap=False
             ),
-            train_set_generator=GridPDFTrainSetGenerator(
-                n_estimators=51,
-                spacing=0.5,
+            train_set_generator=ClusteringPDFTrainSetGenerator(
+                clustering=MiniBatchKMeans(
+                    n_clusters=81
+                ),
                 pdf=pdfs.DistanceExponential(
-                    tau=0.25,
+                    tau=0.30,
                     dist_measure=distance.euclidean
                 ),
-                percent=2.0,
+                percent=1.0,
                 replace=True,
                 repeat=True
             )
@@ -74,7 +67,7 @@ config = {
         validation_percent=0.05
     ),
     "selection_strategy": selection_strategies.SelectByWeightSum(
-        param=0.10,
+        param=0.1,
         kernel=numpy.ones(5)/5
     ),
     "rf": None,
