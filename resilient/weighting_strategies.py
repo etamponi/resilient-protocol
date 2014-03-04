@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-import scipy.spatial.distance
+from scipy.spatial import distance
 from sklearn.base import BaseEstimator
 
 
@@ -26,7 +26,7 @@ class WeightingStrategy(BaseEstimator):
 
 class CentroidBasedWeightingStrategy(WeightingStrategy):
 
-    def __init__(self, dist_measure=scipy.spatial.distance.euclidean):
+    def __init__(self, dist_measure=distance.euclidean):
         self.dist_measure = dist_measure
         self.centroids_ = None
 

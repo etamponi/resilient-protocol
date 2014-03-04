@@ -1,7 +1,7 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-import scipy.spatial.distance
+from scipy.spatial import distance
 from sklearn.base import BaseEstimator
 
 
@@ -25,7 +25,7 @@ class PDF(BaseEstimator):
 
 class DistanceNormal(PDF):
 
-    def __init__(self, precision=20, sqdist_measure=scipy.spatial.distance.sqeuclidean):
+    def __init__(self, precision=20, sqdist_measure=distance.sqeuclidean):
         self.precision = precision
         self.sqdist_measure = sqdist_measure
 
@@ -35,7 +35,7 @@ class DistanceNormal(PDF):
 
 class DistanceExponential(PDF):
 
-    def __init__(self, tau=0.15, dist_measure=scipy.spatial.distance.euclidean):
+    def __init__(self, tau=0.15, dist_measure=distance.euclidean):
         self.tau = tau
         self.dist_measure = dist_measure
 
