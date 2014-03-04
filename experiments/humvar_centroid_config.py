@@ -1,6 +1,5 @@
-from datetime import datetime
-
 import arff
+
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
@@ -9,6 +8,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
 from resilient import pdfs, selection_strategies
+
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
@@ -18,7 +18,7 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 x = 1
 
-with open("humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
+with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
@@ -71,5 +71,11 @@ config = {
         param=10,
         kernel=numpy.ones(5)
     ),
-    "rf": None
+    "rf": None,
+    "use_mcc": False
 }
+
+
+if __name__ == "__main__":
+    from resilient import experiment as exp
+    exp.run_experiment(**config)

@@ -1,5 +1,4 @@
 import arff
-
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
@@ -8,7 +7,6 @@ from sklearn.pipeline import Pipeline
 from sklearn import preprocessing
 
 from resilient import pdfs, selection_strategies
-
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.splitting_strategies import GridPDFSplittingStrategy
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
@@ -17,7 +15,7 @@ from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 x = 1
-with open("humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
+with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
@@ -41,20 +39,20 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=21,
+                n_estimators=51,
                 max_features=4,
                 criterion="entropy",
                 bootstrap=False,
                 max_depth=20
             ),
             splitting_strategy=GridPDFSplittingStrategy(
-                n_estimators=11,
+                n_estimators=201,
                 spacing=0.5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                train_percent=2.0,
+                train_percent=1.0,
                 replace=True,
                 repeat=True
             )
@@ -71,5 +69,11 @@ config = {
         param=0.10,
         kernel=numpy.ones(5)
     ),
-    "rf": None
+    "rf": None,
+    "use_mcc": False
 }
+
+
+if __name__ == "__main__":
+    from resilient import experiment as exp
+    exp.run_experiment(**config)

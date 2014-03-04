@@ -3,6 +3,7 @@ import sys
 
 import numpy
 from numpy.core.fromnumeric import transpose
+from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
@@ -22,12 +23,20 @@ def to_matrix(scores):
     return ret
 
 
+def format_param(param):
+    if isinstance(param, int):
+        return "{:5d}".format(param)
+    else:
+        return "{:5.3f}".format(param)
+
+
 def run_experiment(dataset_name, data, target,
                    pipeline, ensemble, selection_strategy,
-                   cv_method, n_iter, seed, rf):
-    log_filename = "results/{}/{}_{:%Y%m%d-%H%M-%S}.txt".format(
+                   cv_method, n_iter, seed, rf, use_mcc):
+    log_filename = "../results/{}/{}_{}_{:%Y%m%d-%H%M-%S}.txt".format(
         selection_strategy.__class__.__name__,
         dataset_name,
+        "mcc" if use_mcc else "acc",
         datetime.utcnow()
     )
     sys.stdout = Logger(log_filename)
@@ -47,9 +56,10 @@ def run_experiment(dataset_name, data, target,
     print "Dataset size:", len(flt_data)
     print "Dataset labels:", labels
     print HORIZ_LINE
-    print "Preprocessing pipeline:"
-    print pipeline
-    print HORIZ_LINE
+    if pipeline is not None:
+        print "Pipeline:"
+        print pipeline
+        print HORIZ_LINE
     print "Resilient ensemble:"
     print ensemble
     print HORIZ_LINE
@@ -72,7 +82,7 @@ def run_experiment(dataset_name, data, target,
         test_data, test_target = flt_data[test_indices], target[test_indices]
         ensemble.set_params(selection_strategy=selection_strategy)
         ensemble.fit(train_data, train_target)
-        scores_opt[it] = ensemble.score(test_data, test_target)
+        scores_opt[it] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         params_opt[it] = ensemble.selection_strategy.param
 
         params = ensemble.selection_strategy.get_optimization_grid(ensemble)
@@ -82,34 +92,38 @@ def run_experiment(dataset_name, data, target,
         for i, param in enumerate(params):
             print "\rTesting using param:", param,
             ensemble.selection_strategy.param = param
-            re_scores[it][i] = ensemble.score(test_data, test_target)
+            re_scores[it][i] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         print ""
         if rf is not None:
+            # For Random Forest, don't use the filtered data
             print "\rRunning random forest..."
-            rf.fit(train_data, train_target)
-            rf_scores[it] = rf.score(test_data, test_target)  # matthews_corrcoef(rf.predict(test_data), test_target)
+            rf.fit(data[train_indices], target[train_indices])
+            if use_mcc:
+                rf_scores[it] = matthews_corrcoef(rf.predict(data[test_indices]), target[test_indices])
+            else:
+                rf_scores[it] = rf.score(data[test_indices], target[test_indices])
 
     re_scores = to_matrix(re_scores)
     for i, row in enumerate(transpose(re_scores)):
-        print "{}: {} - Mean: {:.3f}".format(numpy.array(re_params[i]), row, row.mean())
+        print "{}: {} - Mean: {:.3f}".format(format_param(re_params[i]), row, row.mean())
 
     best_score_index_per_iter = re_scores.argmax(axis=1)
     best_score_per_iter = re_scores[range(n_iter), best_score_index_per_iter]
     best_param_per_iter = re_params[best_score_index_per_iter]
     print HORIZ_LINE
-    print "Best k: {} - Mean of best k: {:.3f}".format(best_param_per_iter, best_param_per_iter.mean())
-    print "Best r: {} - Mean of best r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
+    print "Bst k: {} - Mean of bst k: {:.3f}".format(best_param_per_iter, best_param_per_iter.mean())
+    print "Bst r: {} - Mean of bst r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
     print HORIZ_LINE
-    print "Opt k : {} - Mean of opt k : {:.3f}".format(params_opt, params_opt.mean())
-    print "Opt r : {} - Mean of opt r : {:.3f}".format(scores_opt, scores_opt.mean())
+    print "Opt k: {} - Mean of opt k: {:.3f}".format(params_opt, params_opt.mean())
+    print "Opt r: {} - Mean of opt r: {:.3f}".format(scores_opt, scores_opt.mean())
     print HORIZ_LINE
     mean_score_per_param = re_scores.mean(axis=0)
     best_mean_score_param = re_params[mean_score_per_param.argmax()]
     best_mean_score_row = re_scores[:, mean_score_per_param.argmax()]
-    print "Best m: {} - Best of means : {:.3f} (k = {})".format(best_mean_score_row, best_mean_score_row.mean(),
-                                                                numpy.array(best_mean_score_param))
+    print "Bst m: {} - Best of means: {:.3f} (k = {})".format(best_mean_score_row, best_mean_score_row.mean(),
+                                                              format_param(best_mean_score_param))
     print HORIZ_LINE
     if rf is not None:
-        print "  RF  : {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
+        print "RndFr: {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
 
     sys.stdout.finish()
