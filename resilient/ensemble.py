@@ -6,9 +6,10 @@ from sklearn.utils.fixes import unique
 from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
 from sklearn.utils.validation import array2d
+from resilient.dataset import Dataset
 
 from resilient.selection_strategies import SelectBestK
-from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -21,21 +22,19 @@ class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
-                 splitting_strategy=CentroidBasedPDFSplittingStrategy()):
+                 train_set_generator=CentroidBasedPDFTrainSetGenerator(),
+                 validation_percent=None):
         self.base_estimator = base_estimator
-        self.splitting_strategy = splitting_strategy
+        self.train_set_generator = train_set_generator
+        self.validation_percent = validation_percent
 
     def train_estimators(self, inp, y, weighting_strategy, random_state):
         classifiers = []
-        i = 0
-        for info in self.splitting_strategy.iterate(inp, y, random_state):
-            l_set, t_set = info[0]
-            i += 1
-            print "\rTraining estimator:", i,
-            est = self._make_estimator(l_set, random_state)
-            if len(info) == 2:
-                est.centroid_ = info[1]
-            weighting_strategy.add_estimator(est, l_set, t_set)
+        for i, train_indices in enumerate(self.train_set_generator.get_indices(inp, y, random_state)):
+            print "\rTraining estimator:", (i+1),
+            train_set, validation_set = self._get_train_validation_split(inp, y, train_indices, random_state)
+            est = self._make_estimator(train_set, random_state)
+            weighting_strategy.add_estimator(est, train_set, validation_set)
             classifiers.append(est)
         print ""
         return classifiers
@@ -46,6 +45,19 @@ class TrainingStrategy(BaseEstimator):
         est.set_params(random_state=check_random_state(seed))
         est.fit(train_set.data, train_set.target)
         return est
+
+    def _get_train_validation_split(self, inp, y, train_indices, random_state):
+        if self.validation_percent is not None:
+            unique_indices = np.unique(train_indices)
+            valid_indices = random_state.choice(len(unique_indices),
+                                                size=(len(unique_indices)*self.validation_percent), replace=False)
+            new_train_indices = []
+            for i in train_indices:
+                if i not in valid_indices:
+                    new_train_indices.append(i)
+            return Dataset(inp[new_train_indices], y[new_train_indices]), Dataset(inp[valid_indices], y[valid_indices])
+        else:
+            return Dataset(inp, y), Dataset(inp, y)
 
 
 class ResilientEnsemble(BaseEstimator, ClassifierMixin):
@@ -80,19 +92,24 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.n_classes_ = len(self.classes_)
         random_state = check_random_state(self.random_state)
 
-        train_indices = random_state.choice(len(inp), size=int(len(inp)*(1.0-self.validation_percent)), replace=False)
-        train_inp, train_y = inp[train_indices], y[train_indices]
+        if self.validation_percent is not None:
+            train_indices = random_state.choice(len(inp),
+                                                size=int(len(inp)*(1.0-self.validation_percent)), replace=False)
+            train_inp, train_y = inp[train_indices], y[train_indices]
+        else:
+            train_inp, train_y = inp, y
+
         self.weighting_strategy.prepare(train_inp, train_y)
         self.classifiers_ = self.training_strategy.train_estimators(train_inp, train_y,
                                                                     self.weighting_strategy, random_state)
 
         if self.validation_percent is not None:
             if self.validation_percent > 0.0:
-                valid_indices = np.ones(len(inp), dtype=bool)
-                valid_indices[train_indices] = False
+                valid_mask = np.ones(len(inp), dtype=bool)
+                valid_mask[train_indices] = False
             else:
-                valid_indices = train_indices
-            valid_inp, valid_y = inp[valid_indices], y[valid_indices]
+                valid_mask = train_indices
+            valid_inp, valid_y = inp[valid_mask], y[valid_mask]
             self.selection_strategy.optimize(self, valid_inp, valid_y)
 
         # Reset it to null because the previous line uses self.predict

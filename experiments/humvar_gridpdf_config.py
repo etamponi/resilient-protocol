@@ -8,7 +8,7 @@ from sklearn import preprocessing
 
 from resilient import pdfs, selection_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.splitting_strategies import GridPDFSplittingStrategy
+from resilient.train_set_generators import GridPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -39,27 +39,26 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=51,
+                n_estimators=5,
                 max_features=4,
                 criterion="entropy",
                 bootstrap=False,
                 max_depth=20
             ),
-            splitting_strategy=GridPDFSplittingStrategy(
-                n_estimators=201,
+            train_set_generator=GridPDFTrainSetGenerator(
+                n_estimators=5,
                 spacing=0.5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                train_percent=1.0,
+                percent=1.0,
                 replace=True,
                 repeat=True
             )
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
-            dist_measure=distance.euclidean,
-            use_real_centroid=True
+            dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
@@ -67,7 +66,7 @@ config = {
     ),
     "selection_strategy": selection_strategies.SelectByWeightSum(
         param=0.10,
-        kernel=numpy.ones(5)
+        kernel=numpy.ones(15)/15
     ),
     "rf": None,
     "use_mcc": False

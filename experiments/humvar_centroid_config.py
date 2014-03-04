@@ -10,7 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from resilient import pdfs, selection_strategies
 
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.splitting_strategies import CentroidBasedPDFSplittingStrategy
+from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -48,20 +48,19 @@ config = {
                 bootstrap=False,
                 max_depth=20
             ),
-            splitting_strategy=CentroidBasedPDFSplittingStrategy(
+            train_set_generator=CentroidBasedPDFTrainSetGenerator(
                 n_estimators=21,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                train_percent=1.0,
+                percent=1.0,
                 replace=True,
                 repeat=True
             )
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
-            dist_measure=distance.euclidean,
-            use_real_centroid=True
+            dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,

@@ -13,9 +13,9 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 class SelectionStrategy(BaseEstimator):
     __metaclass__ = ABCMeta
 
-    def __init__(self, param, kernel=numpy.ones(5)):
+    def __init__(self, param, kernel=numpy.ones(5)/5):
         self.param = param
-        self.kernel = kernel / sum(kernel)
+        self.kernel = kernel
 
     @abstractmethod
     def get_indices(self, weights):
@@ -47,7 +47,7 @@ class SelectionStrategy(BaseEstimator):
 
 class SelectBestK(SelectionStrategy):
 
-    def __init__(self, param=10, kernel=numpy.ones(5)):
+    def __init__(self, param=10, kernel=numpy.ones(5)/5):
         super(SelectBestK, self).__init__(param, kernel)
 
     def get_indices(self, weights):
@@ -61,7 +61,7 @@ class SelectBestK(SelectionStrategy):
 
 class SelectByWeightSum(SelectionStrategy):
 
-    def __init__(self, param=0.10, kernel=numpy.ones(5)):
+    def __init__(self, param=0.10, kernel=numpy.ones(5)/5):
         super(SelectByWeightSum, self).__init__(param, kernel)
 
     def get_indices(self, weights):
@@ -80,7 +80,7 @@ class SelectByWeightSum(SelectionStrategy):
 
 class SelectByThreshold(SelectionStrategy):
 
-    def __init__(self, param=0.10, kernel=numpy.ones(5)):
+    def __init__(self, param=0.10, kernel=numpy.ones(5)/5):
         super(SelectByThreshold, self).__init__(param, kernel)
 
     def get_indices(self, weights):
