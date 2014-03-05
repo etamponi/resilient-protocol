@@ -5,7 +5,10 @@ from math import floor
 import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
-from sklearn.cluster.k_means_ import MiniBatchKMeans
+from sklearn.cluster.affinity_propagation_ import AffinityPropagation
+from sklearn.cluster.k_means_ import MiniBatchKMeans, KMeans
+from sklearn.cluster.mean_shift_ import MeanShift
+from sklearn.utils.validation import array2d
 
 from resilient.pdfs import DistanceExponential
 
@@ -91,11 +94,66 @@ class GridPDFTrainSetGenerator(TrainSetGenerator):
         if not self.repeat:
             indices = numpy.unique(indices)
         return indices
+    
+    
+class ClusterAlgorithmWrapper(BaseEstimator):
+    __metaclass__ = ABCMeta
+    
+    @abstractmethod
+    def fit(self, inp, random_state):
+        pass
+    
+    @abstractmethod
+    def get_centroids(self):
+        pass
+    
+    
+class KMeansWrapper(ClusterAlgorithmWrapper):
+    
+    def __init__(self, n_estimators=101, use_mini_batch=True):
+        self.n_estimators = n_estimators
+        self.use_mini_batch = use_mini_batch
+        self.algorithm_ = None
+    
+    def fit(self, inp, random_state):
+        if self.use_mini_batch:
+            self.algorithm_ = MiniBatchKMeans(n_clusters=self.n_estimators, random_state=random_state).fit(inp)
+        else:
+            self.algorithm_ = KMeans(n_clusters=self.n_estimators, random_state=random_state).fit(inp)
+    
+    def get_centroids(self):
+        return self.algorithm_.cluster_centers_
+    
+
+class AffinityPropagationWrapper(ClusterAlgorithmWrapper):
+    
+    def __init__(self):
+        self.algorithm_ = None
+        self.centroids_ = None
+        
+    def fit(self, inp, random_state):
+        self.algorithm_ = AffinityPropagation().fit(inp)
+        self.centroids_ = array2d([inp[i] for i in self.algorithm_.cluster_centers_indices_])
+
+    def get_centroids(self):
+        return self.centroids_
+    
+    
+class MeanShiftWrapper(ClusterAlgorithmWrapper):
+    
+    def __init__(self):
+        self.algorithm_ = None
+    
+    def get_centroids(self):
+        return self.algorithm_.cluster_centers_
+
+    def fit(self, inp, random_state):
+        self.algorithm_ = MeanShift().fit(inp)
 
 
 class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
 
-    def __init__(self, clustering=MiniBatchKMeans(n_clusters=51),
+    def __init__(self, clustering=KMeansWrapper(n_estimators=51),
                  pdf=DistanceExponential(), percent=1.0, replace=True, repeat=True):
         self.clustering = clustering
         self.pdf = pdf
@@ -104,13 +162,12 @@ class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
         self.repeat = repeat
 
     def get_indices(self, inp, y, random_state):
-        self.clustering.set_params(random_state=random_state)
-        self.clustering.fit(inp)
+        self.clustering.fit(inp, random_state)
         for probs in self._get_probabilities(inp):
             yield self._make_indices(len(inp), probs, random_state)
 
     def _get_probabilities(self, inp):
-        centroids = self.clustering.cluster_centers_
+        centroids = self.clustering.get_centroids()
         print "\rTraining", len(centroids), "estimators..."
         for centroid in centroids:
             yield self.pdf.probabilities(inp, mean=centroid)

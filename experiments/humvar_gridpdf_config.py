@@ -1,12 +1,10 @@
 import arff
 import numpy
 from scipy.spatial import distance
-from sklearn import cross_validation
-from sklearn.covariance.empirical_covariance_ import EmpiricalCovariance
+from sklearn import cross_validation, pipeline, preprocessing
 from sklearn.ensemble.forest import RandomForestClassifier
-from sklearn import preprocessing
 
-from resilient import pdfs, selection_strategies
+from resilient import pdfs, selection_strategies, selection_optimizers
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.train_set_generators import GridPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
@@ -20,15 +18,6 @@ with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
 
-    data = preprocessing.MinMaxScaler().fit_transform(data)
-
-
-precision = EmpiricalCovariance(store_precision=True, assume_centered=False).fit(data).get_precision()
-
-
-def mahalanobis_distance(a, b):
-    return distance.mahalanobis(a, b, VI=precision)
-
 
 config = {
     "seed": 1,
@@ -39,12 +28,12 @@ config = {
     "dataset_name": "humvar_{:02d}".format(x),
     "data": data,
     "target": target,
-    # "pipeline": Pipeline(
-    #     steps=[
-    #         ("scale", preprocessing.MinMaxScaler())
-    #     ]
-    # ),
-    "pipeline": None,
+    "pipeline": pipeline.Pipeline(
+        steps=[
+            ("scale", preprocessing.MinMaxScaler())
+        ]
+    ),
+    # "pipeline": None,
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
@@ -58,25 +47,25 @@ config = {
                 n_estimators=81,
                 spacing=0.5,
                 pdf=pdfs.DistanceExponential(
-                    tau=0.25,
-                    dist_measure=mahalanobis_distance
+                    tau=0.30,
+                    dist_measure=distance.euclidean
                 ),
-                percent=2.0,
+                percent=1.0,
                 replace=True,
                 repeat=True
             )
         ),
+        selection_optimizer=selection_optimizers.SimpleOptimizer(
+            kernel=numpy.ones(3)/3
+        ),
         weighting_strategy=CentroidBasedWeightingStrategy(
-            dist_measure=mahalanobis_distance
+            dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0.05
+        validation_percent=None
     ),
-    "selection_strategy": selection_strategies.SelectByWeightSum(
-        param=0.10,
-        kernel=numpy.ones(5)/5
-    ),
+    "selection_strategy": selection_strategies.SelectBestK(),
     "rf": None,
     "use_mcc": False
 }

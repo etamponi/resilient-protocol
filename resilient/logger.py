@@ -1,5 +1,6 @@
 import os
 import sys
+import cPickle
 
 import numpy
 
@@ -8,10 +9,9 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
 class Logger(object):
-    def __init__(self, filename):
+    def __init__(self):
         numpy.set_printoptions(formatter={'float': lambda x: "{:5.3f}".format(x), 'int': lambda x: "{:5d}".format(x)})
         self.terminal = sys.stdout
-        self.log_file = filename
         self.log_string = ""
         self.disable_log = False
 
@@ -25,16 +25,20 @@ class Logger(object):
             self.disable_log = False
         self.flush()
 
-    def finish(self):
+    def finish(self, log_file, **data):
         sys.stdout = self.terminal
-        self._ensure_dir()
-        with open(self.log_file, "w") as f:
+        self._ensure_dir(log_file)
+        with open(log_file + ".txt", "w") as f:
             f.write(self.log_string)
+        if len(data) > 0:
+            with open(log_file + ".dat", "w") as f:
+                cPickle.dump(data, f)
 
     def flush(self):
         self.terminal.flush()
 
-    def _ensure_dir(self):
-        d = os.path.dirname(self.log_file)
+    @staticmethod
+    def _ensure_dir(log_file):
+        d = os.path.dirname(log_file)
         if not os.path.exists(d):
             os.makedirs(d)

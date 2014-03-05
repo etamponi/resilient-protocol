@@ -1,5 +1,4 @@
 import arff
-
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
@@ -7,11 +6,9 @@ from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from resilient import pdfs, selection_strategies
-
+from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
-from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -42,33 +39,34 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=21,
+                n_estimators=101,
                 max_features=4,
                 criterion="entropy",
-                bootstrap=False
+                bootstrap=False,
+                max_depth=10
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=81,
+                n_estimators=11,
                 pdf=pdfs.DistanceExponential(
-                    tau=0.30,
+                    tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                percent=1.0,
+                percent=2.0,
                 replace=True,
                 repeat=True
             )
         ),
-        weighting_strategy=CentroidBasedWeightingStrategy(
+        selection_optimizer=selection_optimizers.SimpleOptimizer(
+            kernel=numpy.ones(3)/3
+        ),
+        weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0.05
+        validation_percent=0.0
     ),
-    "selection_strategy": selection_strategies.SelectByWeightSum(
-        param=0.1,
-        kernel=numpy.ones(5)/5
-    ),
+    "selection_strategy": selection_strategies.SelectBestK(),
     "rf": None,
     "use_mcc": False
 }

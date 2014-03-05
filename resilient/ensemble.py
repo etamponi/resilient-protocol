@@ -6,7 +6,9 @@ from sklearn.utils.fixes import unique
 from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
 from sklearn.utils.validation import array2d
+
 from resilient.dataset import Dataset
+from resilient.selection_optimizers import SimpleOptimizer
 
 from resilient.selection_strategies import SelectBestK
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
@@ -71,6 +73,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                  training_strategy=TrainingStrategy(),
                  weighting_strategy=CentroidBasedWeightingStrategy(),
                  selection_strategy=SelectBestK(),
+                 selection_optimizer=SimpleOptimizer(),
                  validation_percent=0.1,
                  multiply_by_weight=False,
                  use_prob=True,
@@ -78,6 +81,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.training_strategy = training_strategy
         self.weighting_strategy = weighting_strategy
         self.selection_strategy = selection_strategy
+        self.selection_optimizer = selection_optimizer
         self.validation_percent = validation_percent
         self.multiply_by_weight = multiply_by_weight
         self.use_prob = use_prob
@@ -115,7 +119,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             else:
                 valid_mask = train_indices
             valid_inp, valid_y = inp[valid_mask], y[valid_mask]
-            self.selection_strategy.optimize(self, valid_inp, valid_y)
+            self.selection_optimizer.optimize(self, valid_inp, valid_y)
 
         # Reset it to null because the previous line uses self.predict
         self.precomputed_probs_ = None
@@ -159,8 +163,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             print "\rComputing", len(inp), "probabilities and weights:", (i+1),
         print ""
 
-    def score(self, X, y, use_mcc=False):
+    def score(self, inp, y, use_mcc=False):
         if use_mcc:
-            return matthews_corrcoef(y, self.predict(X))
+            return matthews_corrcoef(y, self.predict(inp))
         else:
-            return super(ResilientEnsemble, self).score(X, y)
+            return super(ResilientEnsemble, self).score(inp, y)

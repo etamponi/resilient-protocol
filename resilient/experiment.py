@@ -8,6 +8,7 @@ from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
+
 from resilient.selection_strategies import SelectBestK
 
 
@@ -35,14 +36,7 @@ def format_param(param):
 def run_experiment(dataset_name, data, target,
                    pipeline, ensemble, selection_strategy,
                    cv_method, n_iter, seed, rf, use_mcc):
-    log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}.txt".format(
-        generator=ensemble.training_strategy.train_set_generator.__class__.__name__,
-        selection=selection_strategy.__class__.__name__,
-        dataset=dataset_name,
-        metric="mcc" if use_mcc else "acc",
-        date=datetime.utcnow()
-    )
-    sys.stdout = Logger(log_filename)
+    sys.stdout = Logger()
 
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
@@ -50,7 +44,6 @@ def run_experiment(dataset_name, data, target,
     ensemble.set_params(random_state=seed)
 
     print HORIZ_LINE
-    print "Experiment file:", log_filename
     print "Experiment seed:", seed
     print "Cross validation method:"
     print cv_method(target, n_iter, seed)
@@ -91,7 +84,7 @@ def run_experiment(dataset_name, data, target,
         scores_opt[it] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         params_opt[it] = ensemble.selection_strategy.param
 
-        params = ensemble.selection_strategy.get_optimization_grid(ensemble)
+        params = ensemble.selection_strategy.get_param_set(ensemble)
         if len(params) > len(re_params):
             re_params = numpy.array(params)
         re_scores.append(numpy.zeros(len(params)))
@@ -132,4 +125,11 @@ def run_experiment(dataset_name, data, target,
     if rf is not None:
         print "RndFr: {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
 
-    sys.stdout.finish()
+    log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}".format(
+        generator=ensemble.training_strategy.train_set_generator.__class__.__name__,
+        selection=selection_strategy.__class__.__name__,
+        dataset=dataset_name,
+        metric="mcc" if use_mcc else "acc",
+        date=datetime.utcnow()
+    )
+    sys.stdout.finish(log_filename, scores=re_scores, params=re_params)

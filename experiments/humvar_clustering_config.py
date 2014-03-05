@@ -2,14 +2,14 @@ import arff
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
-from sklearn.cluster.k_means_ import MiniBatchKMeans
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from resilient import pdfs, selection_strategies
+from resilient import pdfs, selection_strategies, selection_optimizers
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 from resilient.train_set_generators import ClusteringPDFTrainSetGenerator
+from resilient import train_set_generators
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -25,7 +25,7 @@ with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
 
 config = {
     "seed": 1,
-    "n_iter": 10,
+    "n_iter": 5,
     #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
     "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
     #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
@@ -47,29 +47,30 @@ config = {
                 bootstrap=False
             ),
             train_set_generator=ClusteringPDFTrainSetGenerator(
-                clustering=MiniBatchKMeans(
-                    n_clusters=81
+                clustering=train_set_generators.KMeansWrapper(
+                    n_estimators=51,
+                    use_mini_batch=False
                 ),
                 pdf=pdfs.DistanceExponential(
-                    tau=0.30,
+                    tau=0.25,
                     dist_measure=distance.euclidean
                 ),
-                percent=1.0,
+                percent=2.0,
                 replace=True,
                 repeat=True
             )
+        ),
+        selection_optimizer=selection_optimizers.SimpleOptimizer(
+            kernel=numpy.ones(3)/3
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0.05
+        validation_percent=None
     ),
-    "selection_strategy": selection_strategies.SelectBestK(
-        param=10,
-        kernel=numpy.ones(5)/5
-    ),
+    "selection_strategy": selection_strategies.SelectBestK(),
     "rf": None,
     "use_mcc": False
 }
