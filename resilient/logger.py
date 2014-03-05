@@ -10,7 +10,7 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 class Logger(object):
     def __init__(self):
-        numpy.set_printoptions(formatter={'float': lambda x: "{:5.3f}".format(x), 'int': lambda x: "{:5d}".format(x)})
+        numpy.set_printoptions(formatter={'float': lambda x: "{:6.3f}".format(x), 'int': lambda x: "{:5d}".format(x)})
         self.terminal = sys.stdout
         self.log_string = ""
         self.disable_log = False

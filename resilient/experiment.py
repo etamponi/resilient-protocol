@@ -9,7 +9,7 @@ from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
 
-from resilient.selection_strategies import SelectBestK
+from resilient.selection_strategies import SelectBestK, SelectSkipping
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -29,8 +29,12 @@ def to_matrix(scores):
 def format_param(param):
     if isinstance(param, int):
         return "{:5d}".format(param)
-    else:
+    elif isinstance(param, float):
         return "{:5.3f}".format(param)
+    elif isinstance(param, tuple):
+        return "{}".format(numpy.array(param))
+    else:
+        return "{}".format(param)
 
 
 def run_experiment(dataset_name, data, target,
@@ -67,6 +71,8 @@ def run_experiment(dataset_name, data, target,
     scores_opt = numpy.zeros(n_iter)
     if selection_strategy.__class__ == SelectBestK:
         params_opt = numpy.zeros(n_iter, dtype=int)
+    elif selection_strategy.__class__ == SelectSkipping:
+        params_opt = [0 for _ in range(n_iter)]
     else:
         params_opt = numpy.zeros(n_iter)
 
@@ -86,7 +92,7 @@ def run_experiment(dataset_name, data, target,
 
         params = ensemble.selection_strategy.get_param_set(ensemble)
         if len(params) > len(re_params):
-            re_params = numpy.array(params)
+            re_params = params
         re_scores.append(numpy.zeros(len(params)))
         for i, param in enumerate(params):
             print "\rTesting using param:", param,
@@ -108,12 +114,12 @@ def run_experiment(dataset_name, data, target,
 
     best_score_index_per_iter = re_scores.argmax(axis=1)
     best_score_per_iter = re_scores[range(n_iter), best_score_index_per_iter]
-    best_param_per_iter = re_params[best_score_index_per_iter]
+    best_param_per_iter = [re_params[i] for i in best_score_index_per_iter]
     print HORIZ_LINE
-    print "Bst k: {} - Mean of bst k: {:.3f}".format(best_param_per_iter, best_param_per_iter.mean())
+    print "Bst k: {}".format(best_param_per_iter)
     print "Bst r: {} - Mean of bst r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
     print HORIZ_LINE
-    print "Opt k: {} - Mean of opt k: {:.3f}".format(params_opt, params_opt.mean())
+    print "Opt k: {}".format(params_opt)
     print "Opt r: {} - Mean of opt r: {:.3f}".format(scores_opt, scores_opt.mean())
     print HORIZ_LINE
     mean_score_per_param = re_scores.mean(axis=0)

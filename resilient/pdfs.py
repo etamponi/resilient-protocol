@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from cmath import exp
 
 import numpy
 from scipy.spatial import distance
@@ -30,17 +31,18 @@ class DistanceNormal(PDF):
         self.sqdist_measure = sqdist_measure
 
     def probability(self, x, mean=None):
-        return 2**(0.5 * self.precision * self.sqdist_measure(x, mean))
+        return exp(0.5 * self.precision * self.sqdist_measure(x, mean)).real
 
 
 class DistanceExponential(PDF):
 
-    def __init__(self, tau=0.15, dist_measure=distance.euclidean):
+    def __init__(self, base=exp(1), tau=0.15, dist_measure=distance.euclidean):
+        self.base = base
         self.tau = tau
         self.dist_measure = dist_measure
 
     def probability(self, x, mean=None):
-        return 2**(-self.dist_measure(x, mean) / self.tau)
+        return self.base**(-self.dist_measure(x, mean) / self.tau)
 
 
 class Uniform(PDF):

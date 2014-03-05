@@ -25,7 +25,7 @@ with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
 
 config = {
     "seed": 1,
-    "n_iter": 5,
+    "n_iter": 10,
     #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
     "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
     #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
@@ -44,14 +44,16 @@ config = {
                 n_estimators=21,
                 max_features=4,
                 criterion="entropy",
-                bootstrap=False
+                bootstrap=False,
+                max_depth=20
             ),
             train_set_generator=ClusteringPDFTrainSetGenerator(
                 clustering=train_set_generators.KMeansWrapper(
                     n_estimators=51,
-                    use_mini_batch=False
+                    use_mini_batch=True
                 ),
                 pdf=pdfs.DistanceExponential(
+                    base=2,
                     tau=0.25,
                     dist_measure=distance.euclidean
                 ),
@@ -60,17 +62,22 @@ config = {
                 repeat=True
             )
         ),
-        selection_optimizer=selection_optimizers.SimpleOptimizer(
-            kernel=numpy.ones(3)/3
-        ),
         weighting_strategy=CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=None
+        validation_percent=None,
+        selection_optimizer=selection_optimizers.SimpleOptimizer(
+            kernel=numpy.ones(3)/3
+        )
     ),
-    "selection_strategy": selection_strategies.SelectBestK(),
+    "selection_strategy": selection_strategies.SelectSkipping(
+        param=(0.01, 10),
+        selection=selection_strategies.SelectBestK(),
+        max_percent=0.2,
+        steps=31
+    ),
     "rf": None,
     "use_mcc": False
 }
