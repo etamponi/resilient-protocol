@@ -72,9 +72,9 @@ config = {
             kernel=numpy.ones(3)/3
         )
     ),
-    "selection_strategy": selection_strategies.SelectSkipping(
+    "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
         param=(0.01, 10),
-        selection=selection_strategies.SelectBestK(),
+        inner_strategy=selection_strategies.SelectBestK(),
         max_percent=0.2,
         steps=31
     ),

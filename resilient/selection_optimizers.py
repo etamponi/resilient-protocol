@@ -1,6 +1,8 @@
 from abc import ABCMeta, abstractmethod
+from itertools import product
 
 import numpy
+from scipy.ndimage import convolve
 from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score
 
@@ -18,24 +20,35 @@ class SelectionOptimizer(BaseEstimator):
 
 class SimpleOptimizer(SelectionOptimizer):
 
-    def __init__(self, kernel=numpy.ones(5)/5, scoring=accuracy_score):
-        self.kernel = kernel
+    def __init__(self, kernel_size=5, scoring=accuracy_score):
+        self.kernel_size = kernel_size
         self.scoring = scoring
 
     def optimize(self, ensemble, inp, y):
-        original_param = ensemble.selection_strategy.param
-        params = []
-        scores = []
-        for param in ensemble.selection_strategy.get_param_set(ensemble):
-            print "\rOptimization - Checking parameter: {:.3f}".format(param),
-            ensemble.selection_strategy.param = param
-            params.append(param)
-            scores.append(self.scoring(y, ensemble.predict(inp)))
+        indices, keys, params = self._build_params_matrix(ensemble.selection_strategy.get_params_ranges())
+        scores = numpy.zeros(*params.shape[:-1])
+        for index in indices:
+            curr_param = params[index]
+            param_dict = {key: curr_param[i] for i, key in enumerate(keys)}
+            ensemble.selection_strategy.params = param_dict
+            print "\rOptimization - parameters: {}".format(ensemble.selection_strategy.params_to_string(join=" ")),
+            scores[index] = self.scoring(y, ensemble.predict(inp))
         print ""
-        averaged_scores = numpy.convolve(scores, self.kernel, "same")
-        best_index = averaged_scores.argmax()
+        kernel = numpy.ones(*((self.kernel_size,) * len(scores.shape)))
+        kernel /= sum(kernel)
+        averaged_scores = convolve(scores, kernel)
+        best_index = numpy.unravel_index(averaged_scores.argmax(), averaged_scores.shape)
         best_param = params[best_index]
-        print "Selected parameter: {:.3f} with score {:.3f} (averaged {:.3f})".format(best_param, scores[best_index],
-                                                                                      averaged_scores[best_index])
-        ensemble.selection_strategy.param = best_param
-        return original_param
+        print "Selected parameters: {} with score {:.3f} (averaged {:.3f})".format(best_param, scores[best_index],
+                                                                                   averaged_scores[best_index])
+        best_param = {key: best_param[i] for i, key in enumerate(keys)}
+        ensemble.selection_strategy.params = best_param
+
+    @staticmethod
+    def _build_params_matrix(ranges):
+        keys = sorted(ranges.keys())
+        ranges = [ranges[key] for key in keys]
+        indices = product(*[range(len(r)) for r in ranges])
+        params = numpy.array(list(product(*ranges)))
+        params = numpy.reshape(params, tuple(len(r) for r in ranges) + (len(params[0]),))
+        return indices, keys, params

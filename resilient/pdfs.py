@@ -26,12 +26,13 @@ class PDF(BaseEstimator):
 
 class DistanceNormal(PDF):
 
-    def __init__(self, precision=20, sqdist_measure=distance.sqeuclidean):
+    def __init__(self, base=exp(1), precision=20, sqdist_measure=distance.sqeuclidean):
+        self.base = base
         self.precision = precision
         self.sqdist_measure = sqdist_measure
 
     def probability(self, x, mean=None):
-        return exp(0.5 * self.precision * self.sqdist_measure(x, mean)).real
+        return (self.base**(0.5 * self.precision * self.sqdist_measure(x, mean))).real
 
 
 class DistanceExponential(PDF):
@@ -42,7 +43,7 @@ class DistanceExponential(PDF):
         self.dist_measure = dist_measure
 
     def probability(self, x, mean=None):
-        return self.base**(-self.dist_measure(x, mean) / self.tau)
+        return (self.base**(-self.dist_measure(x, mean) / self.tau)).real
 
 
 class Uniform(PDF):

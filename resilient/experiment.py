@@ -1,4 +1,5 @@
 from datetime import datetime
+from itertools import product
 import sys
 
 import numpy
@@ -8,8 +9,6 @@ from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
 from resilient.logger import Logger
-
-from resilient.selection_strategies import SelectBestK, SelectSkipping
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -26,15 +25,13 @@ def to_matrix(scores):
     return ret
 
 
-def format_param(param):
-    if isinstance(param, int):
-        return "{:5d}".format(param)
-    elif isinstance(param, float):
-        return "{:5.3f}".format(param)
-    elif isinstance(param, tuple):
-        return "{}".format(numpy.array(param))
-    else:
-        return "{}".format(param)
+def prepare_params_list(selection_strategy):
+    ranges = selection_strategy.get_params_ranges()
+    keys = sorted(ranges.keys())
+    ranges = [ranges[key] for key in keys]
+    tuples = list(product(*ranges))
+    params = [{key: t[i] for i, key in enumerate(keys)} for t in tuples]
+    return keys, params
 
 
 def run_experiment(dataset_name, data, target,
@@ -67,36 +64,26 @@ def run_experiment(dataset_name, data, target,
     print selection_strategy
     print HORIZ_LINE
 
-    # results is a dictionary with k as key and a vector as value, containing the result for that k on each iteration
     scores_opt = numpy.zeros(n_iter)
-    if selection_strategy.__class__ == SelectBestK:
-        params_opt = numpy.zeros(n_iter, dtype=int)
-    elif selection_strategy.__class__ == SelectSkipping:
-        params_opt = [0 for _ in range(n_iter)]
-    else:
-        params_opt = numpy.zeros(n_iter)
-
+    params_opt = [None] * n_iter
     re_scores = []
-    re_params = []
+    keys, re_params = prepare_params_list(selection_strategy)
+
     rf_scores = numpy.zeros(n_iter)
-    it = -1
-    for train_indices, test_indices in cv_method(target, n_iter, seed):
-        it += 1
+
+    for it, (train_indices, test_indices) in enumerate(cv_method(target, n_iter, seed)):
         print "\rRunning", (it+1), "iteration..."
         train_data, train_target = flt_data[train_indices], target[train_indices]
         test_data, test_target = flt_data[test_indices], target[test_indices]
         ensemble.set_params(selection_strategy=clone(selection_strategy))
         ensemble.fit(train_data, train_target)
         scores_opt[it] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
-        params_opt[it] = ensemble.selection_strategy.param
+        params_opt[it] = ensemble.selection_strategy.params_to_string()
 
-        params = ensemble.selection_strategy.get_param_set(ensemble)
-        if len(params) > len(re_params):
-            re_params = params
-        re_scores.append(numpy.zeros(len(params)))
-        for i, param in enumerate(params):
-            print "\rTesting using param:", param,
-            ensemble.selection_strategy.param = param
+        re_scores.append(numpy.zeros(len(re_params)))
+        for i, params in enumerate(re_params):
+            ensemble.selection_strategy.params = params
+            print "\rTesting using params: {}".format(selection_strategy.params_to_string(join=" ")),
             re_scores[it][i] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         print ""
         if rf is not None:
@@ -110,26 +97,34 @@ def run_experiment(dataset_name, data, target,
 
     re_scores = to_matrix(re_scores)
     for i, row in enumerate(transpose(re_scores)):
-        print "{}: {} - Mean: {:.3f}".format(format_param(re_params[i]), row, row.mean())
+        print "{}: {} - Mean: {:.3f}".format(selection_strategy.params_to_string(re_params[i], join=" "),
+                                             row, row.mean())
 
     best_score_index_per_iter = re_scores.argmax(axis=1)
     best_score_per_iter = re_scores[range(n_iter), best_score_index_per_iter]
-    best_param_per_iter = [re_params[i] for i in best_score_index_per_iter]
+    best_param_per_iter = numpy.transpose(numpy.array([
+        selection_strategy.params_to_string(re_params[i]) for i in best_score_index_per_iter
+    ]))
     print HORIZ_LINE
-    print "Bst k: {}".format(best_param_per_iter)
-    print "Bst r: {} - Mean of bst r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
+    padding = " " * (len(selection_strategy.params_to_string(re_params[0], join=" ")) - 6)
+    for i, params_row in enumerate(best_param_per_iter):
+        print padding, "Bt p{}: |{}| - {}".format(i+1, "|".join(params_row), keys[i])
+    print padding, "Bst r: {} - Mean of bst r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
     print HORIZ_LINE
-    print "Opt k: {}".format(params_opt)
-    print "Opt r: {} - Mean of opt r: {:.3f}".format(scores_opt, scores_opt.mean())
+    for i, params_row in enumerate(numpy.transpose(params_opt)):
+        print padding, "Op p{}: |{}| - {}".format(i+1, "|".join(params_row), keys[i])
+    print padding, "Opt r: {} - Mean of opt r: {:.3f}".format(scores_opt, scores_opt.mean())
     print HORIZ_LINE
     mean_score_per_param = re_scores.mean(axis=0)
     best_mean_score_param = re_params[mean_score_per_param.argmax()]
     best_mean_score_row = re_scores[:, mean_score_per_param.argmax()]
-    print "Bst m: {} - Best of means: {:.3f} (k = {})".format(best_mean_score_row, best_mean_score_row.mean(),
-                                                              format_param(best_mean_score_param))
+    print padding, "Bst m: {} - Best of means: {:.3f} (params = {})".format(
+        best_mean_score_row, best_mean_score_row.mean(),
+        selection_strategy.params_to_string(best_mean_score_param, join=" ")
+    )
     print HORIZ_LINE
     if rf is not None:
-        print "RndFr: {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
+        print padding, "RndFr: {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
 
     log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}".format(
         generator=ensemble.training_strategy.train_set_generator.__class__.__name__,
@@ -138,4 +133,4 @@ def run_experiment(dataset_name, data, target,
         metric="mcc" if use_mcc else "acc",
         date=datetime.utcnow()
     )
-    sys.stdout.finish(log_filename, scores=re_scores, params=re_params)
+    sys.stdout.finish(log_filename, scores=re_scores, params=re_params, params_opt=params_opt)

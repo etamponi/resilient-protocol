@@ -13,7 +13,7 @@ from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
-x = 1
+x = 10
 
 with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
@@ -23,9 +23,9 @@ with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
 
 config = {
     "seed": 1,
-    "n_iter": 10,
-    #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
-    "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
+    "n_iter": 2,
+    "cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
+    #"cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
     #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
     "dataset_name": "humvar_{:02d}".format(x),
     "data": data,
@@ -39,14 +39,14 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=101,
+                n_estimators=5,
                 max_features=4,
                 criterion="entropy",
                 bootstrap=False,
-                max_depth=10
+                max_depth=20
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=11,
+                n_estimators=5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
@@ -57,16 +57,24 @@ config = {
             )
         ),
         selection_optimizer=selection_optimizers.SimpleOptimizer(
-            kernel=numpy.ones(3)/3
+            kernel_size=3
         ),
         weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0.0
+        validation_percent=0.1
     ),
-    "selection_strategy": selection_strategies.SelectBestK(),
+    "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
+        percent=0.1,
+        inner_strategy=selection_strategies.SelectByWeightSum(
+            threshold=0.1,
+            steps=10
+        ),
+        max_percent=0.05,
+        steps=5,
+    ),
     "rf": None,
     "use_mcc": False
 }
