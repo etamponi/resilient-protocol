@@ -18,7 +18,7 @@ class SelectionOptimizer(BaseEstimator):
         pass
 
 
-class SimpleOptimizer(SelectionOptimizer):
+class GridOptimizer(SelectionOptimizer):
 
     def __init__(self, kernel_size=5, scoring=accuracy_score):
         self.kernel_size = kernel_size
@@ -35,7 +35,7 @@ class SimpleOptimizer(SelectionOptimizer):
             scores[index] = self.scoring(y, ensemble.predict(inp))
         print ""
         kernel = numpy.ones(((self.kernel_size,) * len(scores.shape)))
-        kernel /= sum(kernel)
+        kernel /= kernel.sum()
         averaged_scores = convolve(scores, kernel)
         best_index = numpy.unravel_index(averaged_scores.argmax(), averaged_scores.shape)
         best_param = params[best_index]

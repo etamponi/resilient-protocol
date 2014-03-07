@@ -55,7 +55,7 @@ config = {
                 repeat=True
             )
         ),
-        selection_optimizer=selection_optimizers.SimpleOptimizer(
+        selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(

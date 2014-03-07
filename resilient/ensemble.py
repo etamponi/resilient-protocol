@@ -8,7 +8,7 @@ from sklearn.utils.random import check_random_state
 from sklearn.utils.validation import array2d
 
 from resilient.dataset import Dataset
-from resilient.selection_optimizers import SimpleOptimizer
+from resilient.selection_optimizers import GridOptimizer
 
 from resilient.selection_strategies import SelectBestPercent
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
@@ -73,7 +73,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                  training_strategy=TrainingStrategy(),
                  weighting_strategy=CentroidBasedWeightingStrategy(),
                  selection_strategy=SelectBestPercent(),
-                 selection_optimizer=SimpleOptimizer(),
+                 selection_optimizer=GridOptimizer(),
                  validation_percent=0.1,
                  multiply_by_weight=False,
                  use_prob=True,

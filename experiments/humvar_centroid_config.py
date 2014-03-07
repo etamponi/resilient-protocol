@@ -39,14 +39,14 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=21,
+                n_estimators=11,
                 max_features=4,
                 criterion="entropy",
                 bootstrap=False,
                 max_depth=20
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=51,
+                n_estimators=501,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
@@ -56,7 +56,7 @@ config = {
                 repeat=True
             )
         ),
-        selection_optimizer=selection_optimizers.SimpleOptimizer(
+        selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         ),
         weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
@@ -66,14 +66,9 @@ config = {
         use_prob=True,
         validation_percent=0.1
     ),
-    "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
-        similarity=0.01,
-        inner_strategy=selection_strategies.SelectBestPercent(
-            percent=0.20,
-            steps=50
-        ),
-        max_similarity=0.25,
-        steps=25,
+    "selection_strategy": selection_strategies.SelectBestPercent(
+        percent=0.20,
+        steps=500
     ),
     "rf": None,
     "use_mcc": False

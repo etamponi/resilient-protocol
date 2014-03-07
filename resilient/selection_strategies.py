@@ -61,13 +61,13 @@ class SelectBestPercent(SelectionStrategy):
 
     def get_indices(self, weights):
         indices = weights.argsort()
-        k = round(self.percent * len(weights))
+        k = int(round(self.percent * len(weights)))
         k = 1 if k < 1 else k
         # Higher values at the end of the list
         return indices[-k:]
 
     def get_params_ranges(self):
-        return {"percent": linspace(0, 1, self.steps+1)}
+        return {"percent": linspace(0, 1, self.steps+1)[1:]}
 
 
 class SelectByWeightSum(SelectionStrategy):

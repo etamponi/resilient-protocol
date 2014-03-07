@@ -48,4 +48,4 @@ class Logger(object):
 
     @staticmethod
     def format_number(x):
-        return "{:6.3f}".format(x)
+        return "{:5.3f}".format(x)

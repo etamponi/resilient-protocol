@@ -68,7 +68,7 @@ config = {
         multiply_by_weight=False,
         use_prob=True,
         validation_percent=None,
-        selection_optimizer=selection_optimizers.SimpleOptimizer(
+        selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         )
     ),
