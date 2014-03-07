@@ -108,23 +108,24 @@ def run_experiment(dataset_name, data, target,
     print HORIZ_LINE
     padding = " " * (len(selection_strategy.params_to_string(re_params[0], join=" ")) - 6)
     for i, params_row in enumerate(best_param_per_iter):
-        print padding, "Bt p{}: |{}| - {}".format(i+1, "|".join(params_row), keys[i])
-    print padding, "Bst r: {} - Mean of bst r: {:.3f}".format(best_score_per_iter, best_score_per_iter.mean())
+        print "{}Bt p{}: |{}| - {}".format(padding, i+1, "|".join(params_row), keys[i])
+    print "{}Bst r: {} - Mean of bst r: {:.3f}".format(padding, best_score_per_iter, best_score_per_iter.mean())
     print HORIZ_LINE
     for i, params_row in enumerate(numpy.transpose(params_opt)):
-        print padding, "Op p{}: |{}| - {}".format(i+1, "|".join(params_row), keys[i])
-    print padding, "Opt r: {} - Mean of opt r: {:.3f}".format(scores_opt, scores_opt.mean())
+        print "{}Op p{}: |{}| - {}".format(padding, i+1, "|".join(params_row), keys[i])
+    print "{}Opt r: {} - Mean of opt r: {:.3f}".format(padding, scores_opt, scores_opt.mean())
     print HORIZ_LINE
     mean_score_per_param = re_scores.mean(axis=0)
     best_mean_score_param = re_params[mean_score_per_param.argmax()]
     best_mean_score_row = re_scores[:, mean_score_per_param.argmax()]
-    print padding, "Bst m: {} - Best of means: {:.3f} (params = {})".format(
+    print "{}Bst m: {} - Best of means: {:.3f} (params = {})".format(
+        padding,
         best_mean_score_row, best_mean_score_row.mean(),
         selection_strategy.params_to_string(best_mean_score_param, join=" ")
     )
     print HORIZ_LINE
     if rf is not None:
-        print padding, "RndFr: {} - Mean: {:.3f}".format(rf_scores, rf_scores.mean())
+        print "{}RndFr: {} - Mean: {:.3f}".format(padding, rf_scores, rf_scores.mean())
 
     log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}".format(
         generator=ensemble.training_strategy.train_set_generator.__class__.__name__,

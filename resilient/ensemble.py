@@ -156,7 +156,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                     prob = np.zeros_like(prob)
                     prob[max_index] = 1
                 self.precomputed_probs_[i][j] = prob
-            self.precomputed_weights_[i] = self.weighting_strategy.weight_classifiers(x)
+            self.precomputed_weights_[i] = self.weighting_strategy.weight_estimators(x)
             if self.multiply_by_weight:
                 for j in range(len(self.classifiers_)):
                     self.precomputed_probs_[i][j] *= self.precomputed_weights_[i][j]
