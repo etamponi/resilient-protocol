@@ -13,7 +13,7 @@ from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
-x = 10
+x = 1
 
 with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
@@ -39,14 +39,14 @@ config = {
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(
-                n_estimators=5,
+                n_estimators=21,
                 max_features=4,
                 criterion="entropy",
                 bootstrap=False,
                 max_depth=20
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=5,
+                n_estimators=51,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
@@ -57,7 +57,7 @@ config = {
             )
         ),
         selection_optimizer=selection_optimizers.SimpleOptimizer(
-            kernel_size=3
+            kernel_size=5
         ),
         weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
@@ -67,13 +67,13 @@ config = {
         validation_percent=0.1
     ),
     "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
-        percent=0.1,
-        inner_strategy=selection_strategies.SelectByWeightSum(
-            threshold=0.1,
-            steps=10
+        similarity=0.01,
+        inner_strategy=selection_strategies.SelectBestPercent(
+            percent=0.20,
+            steps=50
         ),
-        max_percent=0.05,
-        steps=5,
+        max_similarity=0.25,
+        steps=25,
     ),
     "rf": None,
     "use_mcc": False

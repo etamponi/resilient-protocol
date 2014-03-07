@@ -27,7 +27,7 @@ def to_matrix(scores):
 
 def prepare_params_list(selection_strategy):
     ranges = selection_strategy.get_params_ranges()
-    keys = sorted(ranges.keys())
+    keys = selection_strategy.get_params_names()
     ranges = [ranges[key] for key in keys]
     tuples = list(product(*ranges))
     params = [{key: t[i] for i, key in enumerate(keys)} for t in tuples]
@@ -82,8 +82,8 @@ def run_experiment(dataset_name, data, target,
 
         re_scores.append(numpy.zeros(len(re_params)))
         for i, params in enumerate(re_params):
+            print "\rTesting using params: {}".format(selection_strategy.params_to_string(params, join=" ")),
             ensemble.selection_strategy.params = params
-            print "\rTesting using params: {}".format(selection_strategy.params_to_string(join=" ")),
             re_scores[it][i] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
         print ""
         if rf is not None:

@@ -4,6 +4,7 @@ import numpy
 
 from numpy.core.function_base import linspace
 from sklearn.base import BaseEstimator
+from resilient.logger import Logger
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -38,35 +39,35 @@ class SelectionStrategy(BaseEstimator):
         """
         pass
 
+    def get_params_names(self):
+        return sorted(self.params.keys())
+
     def params_to_string(self, params=None, join=None):
+        ret = []
         if params is None:
             params = self.params
-        ret = self._params_to_string(params)
+        for key in self.get_params_names():
+            ret.append(Logger.format_number(params[key]))
         if join is not None:
             ret = join.join(ret)
         return ret
 
-    @abstractmethod
-    def _params_to_string(self, params):
-        pass
 
+class SelectBestPercent(SelectionStrategy):
 
-class SelectBestK(SelectionStrategy):
-
-    def __init__(self, k=10, max_k=51):
-        super(SelectBestK, self).__init__(k=k)
-        self.max_k = max_k
+    def __init__(self, percent=0.10, steps=50):
+        super(SelectBestPercent, self).__init__(percent=percent)
+        self.steps = steps
 
     def get_indices(self, weights):
         indices = weights.argsort()
+        k = round(self.percent * len(weights))
+        k = 1 if k < 1 else k
         # Higher values at the end of the list
-        return indices[-self.k:]
+        return indices[-k:]
 
     def get_params_ranges(self):
-        return {"k": numpy.array(range(1, self.max_k+1))}
-
-    def _params_to_string(self, params):
-        return ["{:6d}".format(params["k"])]
+        return {"percent": linspace(0, 1, self.steps+1)}
 
 
 class SelectByWeightSum(SelectionStrategy):
@@ -88,14 +89,11 @@ class SelectByWeightSum(SelectionStrategy):
     def get_params_ranges(self):
         return {"threshold": linspace(0, 1, self.steps+1)[1:]}
 
-    def _params_to_string(self, params):
-        return ["{:6.3f}".format(params["threshold"])]
 
-
-class SelectByThreshold(SelectionStrategy):
+class SelectByWeightThreshold(SelectionStrategy):
 
     def __init__(self, threshold=0.10, steps=500):
-        super(SelectByThreshold, self).__init__(threshold=threshold)
+        super(SelectByWeightThreshold, self).__init__(threshold=threshold)
         self.steps = steps
 
     def get_indices(self, weights):
@@ -109,17 +107,14 @@ class SelectByThreshold(SelectionStrategy):
     def get_params_ranges(self):
         return {"threshold": linspace(0, 1, self.steps+1)[1:]}
 
-    def _params_to_string(self, params):
-        return ["{:6.3f}".format(params["threshold"])]
-
 
 class SelectSkippingNearHypersphere(SelectionStrategy):
 
-    def __init__(self, percent=0.01, inner_strategy=SelectBestK(), max_percent=0.2, steps=20):
+    def __init__(self, similarity=0.01, inner_strategy=SelectBestPercent(), max_similarity=0.2, steps=20):
         inner_params = {"inner_" + key: value for key, value in inner_strategy.params.iteritems()}
-        super(SelectSkippingNearHypersphere, self).__init__(percent=percent, **inner_params)
+        super(SelectSkippingNearHypersphere, self).__init__(similarity=similarity, **inner_params)
         self.inner_strategy = inner_strategy
-        self.max_percent = max_percent
+        self.max_similarity = max_similarity
         self.steps = steps
 
     def get_indices(self, weights):
@@ -129,21 +124,17 @@ class SelectSkippingNearHypersphere(SelectionStrategy):
         filtered_weights[indices[0]] = weights[indices[0]]
         last_weight = filtered_weights[indices[0]]
         for i in indices[1:]:
-            if self._diff_percent(last_weight, weights[i]) >= self.percent:
+            if self._diff_percent(last_weight, weights[i]) >= self.similarity:
                 filtered_weights[i] = weights[i]
                 last_weight = filtered_weights[i]
         self.inner_strategy.params = inner_params
         return self.inner_strategy.get_indices(filtered_weights)
 
     def get_params_ranges(self):
-        ret = {"percent": linspace(0, self.max_percent, self.steps+1)}
+        ret = {"similarity": linspace(0, self.max_similarity, self.steps+1)}
         inner = {"inner_" + key: value for key, value in self.inner_strategy.get_params_ranges().iteritems()}
         ret.update(inner)
         return ret
-
-    def _params_to_string(self, params):
-        inner_params = {key[6:]: value for key, value in params.iteritems() if key.startswith("inner_")}
-        return ["{:6.3f}".format(params["percent"])] + self.inner_strategy._params_to_string(inner_params)
 
     @staticmethod
     def _diff_percent(a, b):

@@ -25,8 +25,8 @@ class SimpleOptimizer(SelectionOptimizer):
         self.scoring = scoring
 
     def optimize(self, ensemble, inp, y):
-        indices, keys, params = self._build_params_matrix(ensemble.selection_strategy.get_params_ranges())
-        scores = numpy.zeros(*params.shape[:-1])
+        indices, keys, params = self._build_params_matrix(ensemble.selection_strategy)
+        scores = numpy.zeros(params.shape[:-1])
         for index in indices:
             curr_param = params[index]
             param_dict = {key: curr_param[i] for i, key in enumerate(keys)}
@@ -34,19 +34,21 @@ class SimpleOptimizer(SelectionOptimizer):
             print "\rOptimization - parameters: {}".format(ensemble.selection_strategy.params_to_string(join=" ")),
             scores[index] = self.scoring(y, ensemble.predict(inp))
         print ""
-        kernel = numpy.ones(*((self.kernel_size,) * len(scores.shape)))
+        kernel = numpy.ones(((self.kernel_size,) * len(scores.shape)))
         kernel /= sum(kernel)
         averaged_scores = convolve(scores, kernel)
         best_index = numpy.unravel_index(averaged_scores.argmax(), averaged_scores.shape)
         best_param = params[best_index]
-        print "Selected parameters: {} with score {:.3f} (averaged {:.3f})".format(best_param, scores[best_index],
-                                                                                   averaged_scores[best_index])
         best_param = {key: best_param[i] for i, key in enumerate(keys)}
         ensemble.selection_strategy.params = best_param
+        print "Selected parameters: [{}] with score {:.3f} (averaged {:.3f})".format(
+            ensemble.selection_strategy.params_to_string(join=" "), scores[best_index], averaged_scores[best_index]
+        )
 
     @staticmethod
-    def _build_params_matrix(ranges):
-        keys = sorted(ranges.keys())
+    def _build_params_matrix(selection_strategy):
+        ranges = selection_strategy.get_params_ranges()
+        keys = selection_strategy.get_params_names()
         ranges = [ranges[key] for key in keys]
         indices = product(*[range(len(r)) for r in ranges])
         params = numpy.array(list(product(*ranges)))

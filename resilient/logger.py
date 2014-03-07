@@ -10,7 +10,10 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 class Logger(object):
     def __init__(self):
-        numpy.set_printoptions(formatter={'float_kind': lambda x: "{:6.3f}".format(x)})
+        numpy.set_printoptions(formatter={
+            'float_kind': self.format_number,
+            'int_kind': self.format_number
+        })
         self.terminal = sys.stdout
         self.log_string = ""
         self.disable_log = False
@@ -42,3 +45,7 @@ class Logger(object):
         d = os.path.dirname(log_file)
         if not os.path.exists(d):
             os.makedirs(d)
+
+    @staticmethod
+    def format_number(x):
+        return "{:6.3f}".format(x)

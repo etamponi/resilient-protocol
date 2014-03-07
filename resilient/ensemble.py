@@ -10,7 +10,7 @@ from sklearn.utils.validation import array2d
 from resilient.dataset import Dataset
 from resilient.selection_optimizers import SimpleOptimizer
 
-from resilient.selection_strategies import SelectBestK
+from resilient.selection_strategies import SelectBestPercent
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
@@ -72,7 +72,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
     def __init__(self,
                  training_strategy=TrainingStrategy(),
                  weighting_strategy=CentroidBasedWeightingStrategy(),
-                 selection_strategy=SelectBestK(),
+                 selection_strategy=SelectBestPercent(),
                  selection_optimizer=SimpleOptimizer(),
                  validation_percent=0.1,
                  multiply_by_weight=False,

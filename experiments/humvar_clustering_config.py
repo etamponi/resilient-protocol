@@ -69,13 +69,16 @@ config = {
         use_prob=True,
         validation_percent=None,
         selection_optimizer=selection_optimizers.SimpleOptimizer(
-            kernel=numpy.ones(3)/3
+            kernel_size=5
         )
     ),
     "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
-        param=(0.01, 10),
-        inner_strategy=selection_strategies.SelectBestK(),
-        max_percent=0.2,
+        similarity=0.01,
+        inner_strategy=selection_strategies.SelectBestPercent(
+            percent=0.20,
+            steps=50
+        ),
+        max_similarity=0.2,
         steps=31
     ),
     "rf": None,

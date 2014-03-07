@@ -56,7 +56,7 @@ config = {
             )
         ),
         selection_optimizer=selection_optimizers.SimpleOptimizer(
-            kernel=numpy.ones(3)/3
+            kernel_size=5
         ),
         weighting_strategy=CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
@@ -65,7 +65,10 @@ config = {
         use_prob=True,
         validation_percent=None
     ),
-    "selection_strategy": selection_strategies.SelectBestK(),
+    "selection_strategy": selection_strategies.SelectBestPercent(
+        percent=0.20,
+        steps=50
+    ),
     "rf": None,
     "use_mcc": False
 }
