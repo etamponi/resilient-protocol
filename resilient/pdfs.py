@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from cmath import exp
+import cmath
 
 import numpy
 from scipy.spatial import distance
@@ -22,19 +22,19 @@ class PDF(BaseEstimator):
             old_values[key] = getattr(self, key)
             setattr(self, key, value)
 
-        p = numpy.zeros(inp.shape[0])
+        p = numpy.zeros(len(inp))
         for i, x in enumerate(inp):
-            p[i] = self.probability(x, **runtime_args)
+            p[i] = self.probability(x)
         p = p / p.sum()
 
-        for key, value in old_values:
+        for key, value in old_values.iteritems():
             setattr(self, key, value)
         return p
 
 
 class DistanceNormal(PDF):
 
-    def __init__(self, mean=0, precision=20, base=exp(1), sqdist_measure=distance.sqeuclidean):
+    def __init__(self, mean=0, precision=20, base=cmath.e, sqdist_measure=distance.sqeuclidean):
         self.mean = mean
         self.precision = precision
         self.base = base
@@ -46,7 +46,7 @@ class DistanceNormal(PDF):
 
 class DistanceExponential(PDF):
 
-    def __init__(self, mean=0, tau=0.15, base=exp(1), dist_measure=distance.euclidean):
+    def __init__(self, mean=0, tau=0.15, base=cmath.e, dist_measure=distance.euclidean):
         self.mean = mean
         self.base = base
         self.tau = tau

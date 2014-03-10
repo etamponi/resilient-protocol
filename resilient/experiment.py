@@ -1,4 +1,6 @@
+from copy import deepcopy
 from datetime import datetime
+from multiprocessing import Pool
 import sys
 
 import numpy
@@ -16,12 +18,38 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 HORIZ_LINE = "-" * 60
 
 
-def to_matrix(scores):
-    lengths = numpy.array([len(x) for x in scores])
-    ret = numpy.zeros(shape=(len(scores), lengths.max()))
-    for i, score in enumerate(scores):
-        ret[i, :len(score)] += score
-    return ret
+def run_iter((ensemble, re_params, it, train_indices, test_indices, data, flt_data, target, rf, use_mcc)):
+    Logger.get().write("!Running", (it+1), "iteration...")
+    train_data, train_target = flt_data[train_indices], target[train_indices]
+    test_data, test_target = flt_data[test_indices], target[test_indices]
+    ensemble.fit(train_data, train_target)
+
+    score_opt = ensemble.score(test_data, test_target, use_mcc=use_mcc)
+    param_opt = ensemble.selection_strategy.params_to_string()
+
+    re_scores = numpy.zeros(len(re_params))
+    for i, params in enumerate(re_params):
+        ensemble.selection_strategy.params = params
+        Logger.get().write("!Testing using params: {}".format(ensemble.selection_strategy.params_to_string(join=" ")))
+        re_scores[i] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
+
+    if rf is not None:
+        # For Random Forest, don't use the filtered data
+        Logger.get().write("!Running random forest...")
+        rf.fit(data[train_indices], target[train_indices])
+        if use_mcc:
+            rf_score = matthews_corrcoef(rf.predict(data[test_indices]), target[test_indices])
+        else:
+            rf_score = rf.score(data[test_indices], target[test_indices])
+    else:
+        rf_score = None
+
+    return {
+        "score_opt": score_opt,
+        "param_opt": param_opt,
+        "re_scores": re_scores,
+        "rf_score": rf_score
+    }
 
 
 def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc):
@@ -51,40 +79,26 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     Logger.get().write(selection_strategy)
     Logger.get().write(HORIZ_LINE)
 
+    keys, re_params = ensemble.selection_optimizer.build_params_matrix(selection_strategy, matrix_form=False)
+    re_params = [{keys[i]: params[i]} for i in range(len(keys)) for params in re_params]
+    re_scores = numpy.zeros((n_iter, len(re_params)))
     scores_opt = numpy.zeros(n_iter)
     params_opt = [None] * n_iter
-    re_scores = []
-    keys, re_params = ensemble.selection_optimizer.build_params_matrix(selection_strategy, matrix_form=False)
-
     rf_scores = numpy.zeros(n_iter)
 
-    for it, (train_indices, test_indices) in enumerate(cv_method(target, n_iter, seed)):
-        Logger.get().write("!Running", (it+1), "iteration...")
-        train_data, train_target = flt_data[train_indices], target[train_indices]
-        test_data, test_target = flt_data[test_indices], target[test_indices]
-        ensemble.set_params(selection_strategy=clone(selection_strategy))
-        ensemble.fit(train_data, train_target)
-        scores_opt[it] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
-        params_opt[it] = ensemble.selection_strategy.params_to_string()
-
-        re_scores.append(numpy.zeros(len(re_params)))
-        for i, params in enumerate(re_params):
-            Logger.get().write("!Testing using params: {}".format(
-                selection_strategy.params_to_string(params, join=" ")
-            ))
-            ensemble.selection_strategy.params = params
-            re_scores[it][i] = ensemble.score(test_data, test_target, use_mcc=use_mcc)
-
+    pool = Pool()
+    args = list((clone(ensemble), deepcopy(re_params),
+                 it, lix, tix, numpy.copy(data), numpy.copy(flt_data), numpy.copy(target),
+                 None if rf is None else clone(rf), use_mcc)
+                for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed)))
+    results = pool.map(run_iter, args)
+    for it, result in enumerate(results):
+        re_scores[it] = result["re_scores"]
+        scores_opt[it] = result["score_opt"]
+        params_opt[it] = result["param_opt"]
         if rf is not None:
-            # For Random Forest, don't use the filtered data
-            Logger.get().write("!Running random forest...")
-            rf.fit(data[train_indices], target[train_indices])
-            if use_mcc:
-                rf_scores[it] = matthews_corrcoef(rf.predict(data[test_indices]), target[test_indices])
-            else:
-                rf_scores[it] = rf.score(data[test_indices], target[test_indices])
+            rf_scores[it] = result["rf_score"]
 
-    re_scores = to_matrix(re_scores)
     for i, row in enumerate(transpose(re_scores)):
         Logger.get().write("{}: {} - Mean: {:.3f}".format(selection_strategy.params_to_string(re_params[i], join=" "),
                                                           row, row.mean()))
@@ -126,4 +140,4 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
         date=datetime.utcnow()
     )
 
-    sys.stdout.save(log_filename, scores=re_scores, params=re_params, params_opt=params_opt)
+    Logger.get().save(log_filename, scores=re_scores, params=re_params, params_opt=params_opt)

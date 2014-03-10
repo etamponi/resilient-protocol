@@ -1,7 +1,9 @@
 import arff
+import cmath
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
+from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree.tree import DecisionTreeClassifier
@@ -13,20 +15,17 @@ from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
-x = 10
+x = 1
 
 with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
 
-    data = data[:100]
-    target = target[:100]
-
 
 config = {
     "seed": 1,
-    "n_iter": 2,
+    "n_iter": 3,
     "cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
     #"cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
     #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
@@ -41,13 +40,15 @@ config = {
     # "pipeline": None,
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
-            base_estimator=DecisionTreeClassifier(
+            base_estimator=RandomForestClassifier(
+                n_estimators=21,
+                bootstrap=False,
                 criterion="entropy",
                 max_depth=20,
                 max_features=4
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=5,
+                n_estimators=101,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
@@ -58,17 +59,22 @@ config = {
             )
         ),
         selection_strategy=selection_strategies.SelectRandomPercent(
-            percent=0.10
+            percent=0.33,
+            pdf=pdfs.DistanceExponential(
+                tau=0.20,
+                base=cmath.e
+            )
         ),
         selection_optimizer=selection_optimizers.GridOptimizer(
-            kernel_size=5
+            kernel_size=5,
+            steps=101
         ),
         weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=0.10
+        validation_percent=None
     ),
     "rf": None,
     "use_mcc": False

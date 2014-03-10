@@ -10,7 +10,6 @@ from sklearn.utils.validation import array2d
 from resilient.dataset import Dataset
 from resilient.logger import Logger
 from resilient.selection_optimizers import GridOptimizer
-
 from resilient.selection_strategies import SelectBestPercent
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy

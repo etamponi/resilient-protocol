@@ -13,10 +13,12 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 class SelectionStrategy(BaseEstimator):
     __metaclass__ = ABCMeta
 
-    def __init__(self, params):
+    def __init__(self, **params):
         self.params = params
 
     def __getattr__(self, item):
+        if item == "params":
+            return self.__getattribute__(item)
         return self.params[item]
 
     def __setattr__(self, key, value):
@@ -49,7 +51,7 @@ class SelectionStrategy(BaseEstimator):
 class SelectBestPercent(SelectionStrategy):
 
     def __init__(self, percent=0.10):
-        super(SelectBestPercent, self).__init__(dict(percent=percent))
+        super(SelectBestPercent, self).__init__(percent=percent)
 
     def get_indices(self, weights, random_state):
         indices = weights.argsort()
@@ -62,7 +64,7 @@ class SelectBestPercent(SelectionStrategy):
 class SelectByWeightSum(SelectionStrategy):
 
     def __init__(self, threshold=0.10):
-        super(SelectByWeightSum, self).__init__(dict(threshold=threshold))
+        super(SelectByWeightSum, self).__init__(threshold=threshold)
 
     def get_indices(self, weights, random_state):
         weights = weights / sum(weights)
@@ -78,7 +80,7 @@ class SelectByWeightSum(SelectionStrategy):
 class SelectRandomPercent(SelectionStrategy):
 
     def __init__(self, percent=0.10, pdf=pdfs.DistanceExponential()):
-        super(SelectRandomPercent, self).__init__(dict(percent=percent))
+        super(SelectRandomPercent, self).__init__(percent=percent)
         self.pdf = pdf
 
     def get_indices(self, weights, random_state):
@@ -92,7 +94,7 @@ class SelectRandomPercent(SelectionStrategy):
 class SelectByWeightThreshold(SelectionStrategy):
 
     def __init__(self, threshold=0.10, steps=500):
-        super(SelectByWeightThreshold, self).__init__(dict(threshold=threshold))
+        super(SelectByWeightThreshold, self).__init__(threshold=threshold)
         self.steps = steps
 
     def get_indices(self, weights, random_state):
@@ -108,7 +110,7 @@ class SelectSkippingNearHypersphere(SelectionStrategy):
 
     def __init__(self, similarity=0.01, inner_strategy=SelectBestPercent()):
         inner_params = {"inner_" + key: value for key, value in inner_strategy.params.iteritems()}
-        super(SelectSkippingNearHypersphere, self).__init__(dict(similarity=similarity, **inner_params))
+        super(SelectSkippingNearHypersphere, self).__init__(similarity=similarity, **inner_params)
         self.inner_strategy = inner_strategy
 
     def get_indices(self, weights, random_state):

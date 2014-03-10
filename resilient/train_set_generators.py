@@ -11,7 +11,6 @@ from sklearn.cluster.mean_shift_ import MeanShift
 from sklearn.utils.validation import array2d
 
 from resilient.logger import Logger
-
 from resilient.pdfs import DistanceExponential
 
 
