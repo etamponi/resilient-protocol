@@ -7,6 +7,8 @@ from scipy.ndimage import convolve
 from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score
 
+from resilient.logger import Logger
+
 
 __author__ = 'tamponi'
 
@@ -35,9 +37,10 @@ class GridOptimizer(SelectionOptimizer):
             curr_param = params[index]
             param_dict = {key: curr_param[i] for i, key in enumerate(keys)}
             ensemble.selection_strategy.params = param_dict
-            print "\rOptimization - parameters: {}".format(ensemble.selection_strategy.params_to_string(join=" ")),
+            Logger.get().write("!Optimization - parameters: {}".format(
+                ensemble.selection_strategy.params_to_string(join=" ")
+            ))
             scores[index] = self.scoring(y, ensemble.predict(inp))
-        print ""
         kernel = numpy.ones(((self.kernel_size,) * len(scores.shape)))
         kernel /= kernel.sum()
         averaged_scores = convolve(scores, kernel)
@@ -45,9 +48,9 @@ class GridOptimizer(SelectionOptimizer):
         best_param = params[best_index]
         best_param = {key: best_param[i] for i, key in enumerate(keys)}
         ensemble.selection_strategy.params = best_param
-        print "Selected parameters: [{}] with score {:.3f} (averaged {:.3f})".format(
+        Logger.get().write("Selected parameters: [{}] with score {:.3f} (averaged {:.3f})".format(
             ensemble.selection_strategy.params_to_string(join=" "), scores[best_index], averaged_scores[best_index]
-        )
+        ))
 
     def build_params_matrix(self, selection_strategy, matrix_form=True):
         custom_ranges = self.custom_ranges if self.custom_ranges is not None else {}

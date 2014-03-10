@@ -8,6 +8,7 @@ from sklearn.utils.random import check_random_state
 from sklearn.utils.validation import array2d
 
 from resilient.dataset import Dataset
+from resilient.logger import Logger
 from resilient.selection_optimizers import GridOptimizer
 
 from resilient.selection_strategies import SelectBestPercent
@@ -33,12 +34,11 @@ class TrainingStrategy(BaseEstimator):
     def train_estimators(self, inp, y, weighting_strategy, random_state):
         classifiers = []
         for i, train_indices in enumerate(self.train_set_generator.get_indices(inp, y, random_state)):
-            print "\rTraining estimator:", (i+1),
+            Logger.get().write("!Training estimator:", (i+1))
             train_set, validation_set = self._get_train_validation_split(inp, y, train_indices, random_state)
             est = self._make_estimator(train_set, random_state)
             weighting_strategy.add_estimator(est, train_set, validation_set)
             classifiers.append(est)
-        print ""
         return classifiers
 
     def _make_estimator(self, train_set, random_state):
@@ -161,8 +161,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             if self.multiply_by_weight:
                 for j in range(len(self.classifiers_)):
                     self.precomputed_probs_[i][j] *= self.precomputed_weights_[i][j]
-            print "\rComputing", len(inp), "probabilities and weights:", (i+1),
-        print ""
+            Logger.get().write("!Computing", len(inp), "probabilities and weights:", (i+1))
 
     def score(self, inp, y, use_mcc=False):
         if use_mcc:

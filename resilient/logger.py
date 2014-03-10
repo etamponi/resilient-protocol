@@ -1,5 +1,5 @@
+from multiprocessing import Lock
 import os
-import sys
 import cPickle
 
 import numpy
@@ -9,36 +9,43 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
 class Logger(object):
+
+    logger = None
+
+    @classmethod
+    def get(cls):
+        if cls.logger is None:
+            cls.logger = Logger()
+        return cls.logger
+
     def __init__(self):
+        if Logger.logger is not None:
+            print "Error: a Logger already exists"
+            exit(1)
         numpy.set_printoptions(formatter={
             'float_kind': self.format_number,
             'int_kind': self.format_number
         })
-        self.terminal = sys.stdout
         self.log_string = ""
-        self.disable_log = False
+        self.lock = Lock()
 
-    def write(self, message):
-        self.terminal.write(message)
-        if message.startswith("\r"):
-            self.disable_log = True
-        if not self.disable_log:
-            self.log_string += message
-        if message.endswith("\n") and self.disable_log:
-            self.disable_log = False
-        self.flush()
+    def write(self, *tokens):
+        message = " ".join(str(token) for token in tokens)
+        self.lock.acquire()
+        if message.startswith("!"):
+            message = "{:6d}: {}".format(os.getpid(), message[1:])
+        else:
+            self.log_string += message + "\n"
+        print message
+        self.lock.release()
 
-    def finish(self, log_file, **data):
-        sys.stdout = self.terminal
-        self._ensure_dir(log_file)
-        with open(log_file + ".txt", "w") as f:
+    def save(self, log_name, **data):
+        self._ensure_dir(log_name)
+        with open(log_name + ".txt", "w") as f:
             f.write(self.log_string)
         if len(data) > 0:
-            with open(log_file + ".dat", "w") as f:
+            with open(log_name + ".dat", "w") as f:
                 cPickle.dump(data, f)
-
-    def flush(self):
-        self.terminal.flush()
 
     @staticmethod
     def _ensure_dir(log_file):

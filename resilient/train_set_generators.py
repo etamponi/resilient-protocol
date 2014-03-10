@@ -10,6 +10,8 @@ from sklearn.cluster.k_means_ import MiniBatchKMeans, KMeans
 from sklearn.cluster.mean_shift_ import MeanShift
 from sklearn.utils.validation import array2d
 
+from resilient.logger import Logger
+
 from resilient.pdfs import DistanceExponential
 
 
@@ -34,7 +36,7 @@ class CentroidBasedPDFTrainSetGenerator(TrainSetGenerator):
         self.repeat = repeat
 
     def get_indices(self, inp, y, random_state):
-        print "\rTraining", self.n_estimators, "estimators..."
+        Logger.get().write("!Training", self.n_estimators, "estimators...")
         for probs in self._get_probabilities(inp, random_state):
             yield self._make_indices(len(inp), probs, random_state)
 
@@ -76,14 +78,14 @@ class GridPDFTrainSetGenerator(TrainSetGenerator):
         for x in inp:
             code = tuple([floor(t / self.spacing) for t in x])
             cells.add(code)
-        print "Cells found:", len(cells)
+        Logger.get().write("Cells found:", len(cells))
         return list(cells)
 
     def _get_probabilities(self, inp, cells, random_state):
         cells = random_state.permutation(cells)
         if self.n_estimators is not None and self.n_estimators < len(cells):
             cells = cells[:self.n_estimators]
-        print "\rTraining", len(cells), "estimators..."
+        Logger.get().write("!Training", len(cells), "estimators...")
         for cell in cells:
             mean = (numpy.array(cell) + 0.5) * self.spacing
             probs = self.pdf.probabilities(inp, mean=mean)
@@ -168,7 +170,7 @@ class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
 
     def _get_probabilities(self, inp):
         centroids = self.clustering.get_centroids()
-        print "\rTraining", len(centroids), "estimators..."
+        Logger.get().write("!Training", len(centroids), "estimators...")
         for centroid in centroids:
             yield self.pdf.probabilities(inp, mean=centroid)
 
