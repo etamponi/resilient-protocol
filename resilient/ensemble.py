@@ -92,6 +92,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.classifiers_ = None
         self.precomputed_probs_ = None
         self.precomputed_weights_ = None
+        self.random_state_ = None
 
     def fit(self, inp, y):
         self.precomputed_probs_ = None
@@ -99,18 +100,18 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
         self.classes_, y = unique(y, return_inverse=True)
         self.n_classes_ = len(self.classes_)
-        random_state = check_random_state(self.random_state)
+        self.random_state_ = check_random_state(self.random_state)
 
         if self.validation_percent is not None:
-            train_indices = random_state.choice(len(inp),
-                                                size=int(len(inp)*(1.0-self.validation_percent)), replace=False)
+            train_indices = self.random_state_.choice(len(inp), size=int(len(inp)*(1.0-self.validation_percent)),
+                                                      replace=False)
             train_inp, train_y = inp[train_indices], y[train_indices]
         else:
             train_inp, train_y = inp, y
 
         self.weighting_strategy.prepare(train_inp, train_y)
         self.classifiers_ = self.training_strategy.train_estimators(train_inp, train_y,
-                                                                    self.weighting_strategy, random_state)
+                                                                    self.weighting_strategy, self.random_state_)
 
         if self.validation_percent is not None:
             if self.validation_percent > 0.0:
@@ -134,7 +135,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             self._precompute(inp)
         prob = np.zeros((len(inp), self.n_classes_))
         for i in range(len(inp)):
-            active_indices = self.selection_strategy.get_indices(self.precomputed_weights_[i])
+            active_indices = self.selection_strategy.get_indices(self.precomputed_weights_[i], self.random_state_)
             prob[i] = self.precomputed_probs_[i][active_indices].sum(axis=0)
         preprocessing.normalize(prob, norm='l1', copy=False)
         return prob

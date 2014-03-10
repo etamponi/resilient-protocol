@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from itertools import product
 
 import numpy
+import operator
 from scipy.ndimage import convolve
 from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score
@@ -20,14 +21,17 @@ class SelectionOptimizer(BaseEstimator):
 
 class GridOptimizer(SelectionOptimizer):
 
-    def __init__(self, kernel_size=5, scoring=accuracy_score):
+    def __init__(self, steps=500, kernel_size=5, scoring=accuracy_score, custom_ranges=None):
+        self.steps = steps
         self.kernel_size = kernel_size
         self.scoring = scoring
+        self.custom_ranges = custom_ranges
 
     def optimize(self, ensemble, inp, y):
-        indices, keys, params = self._build_params_matrix(ensemble.selection_strategy)
+        keys, params = self.build_params_matrix(ensemble.selection_strategy)
         scores = numpy.zeros(params.shape[:-1])
-        for index in indices:
+        for index in xrange(reduce(operator.mul, scores.shape, 1)):
+            index = numpy.unravel_index(index, scores.shape)
             curr_param = params[index]
             param_dict = {key: curr_param[i] for i, key in enumerate(keys)}
             ensemble.selection_strategy.params = param_dict
@@ -45,12 +49,14 @@ class GridOptimizer(SelectionOptimizer):
             ensemble.selection_strategy.params_to_string(join=" "), scores[best_index], averaged_scores[best_index]
         )
 
-    @staticmethod
-    def _build_params_matrix(selection_strategy):
-        ranges = selection_strategy.get_params_ranges()
+    def build_params_matrix(self, selection_strategy, matrix_form=True):
+        custom_ranges = self.custom_ranges if self.custom_ranges is not None else {}
         keys = selection_strategy.get_params_names()
-        ranges = [ranges[key] for key in keys]
-        indices = product(*[range(len(r)) for r in ranges])
+        ranges = [
+            custom_ranges[key] if key in custom_ranges else numpy.linspace(0, 1, self.steps+1) for key in keys
+        ]
+        # indices = product(*[range(len(r)) for r in ranges])
         params = numpy.array(list(product(*ranges)))
-        params = numpy.reshape(params, tuple(len(r) for r in ranges) + (len(params[0]),))
-        return indices, keys, params
+        if matrix_form:
+            params = numpy.reshape(params, tuple(len(r) for r in ranges) + (len(params[0]),))
+        return keys, params

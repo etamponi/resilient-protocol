@@ -35,12 +35,13 @@ def prepare_params_list(selection_strategy):
 
 
 def run_experiment(dataset_name, data, target,
-                   pipeline, ensemble, selection_strategy,
+                   pipeline, ensemble,
                    cv_method, n_iter, seed, rf, use_mcc):
     sys.stdout = Logger()
 
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
+    selection_strategy = ensemble.selection_strategy
 
     ensemble.set_params(random_state=seed)
 
@@ -67,7 +68,7 @@ def run_experiment(dataset_name, data, target,
     scores_opt = numpy.zeros(n_iter)
     params_opt = [None] * n_iter
     re_scores = []
-    keys, re_params = prepare_params_list(selection_strategy)
+    keys, re_params = ensemble.selection_optimizer.build_params_matrix(selection_strategy, matrix_form=False)
 
     rf_scores = numpy.zeros(n_iter)
 

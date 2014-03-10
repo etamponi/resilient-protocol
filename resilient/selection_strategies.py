@@ -1,9 +1,11 @@
 from abc import ABCMeta, abstractmethod
 
 import numpy
-
-from numpy.core.function_base import linspace
 from sklearn.base import BaseEstimator
+from sklearn.neighbors.ball_tree import array2d
+from sklearn.utils.random import check_random_state
+
+from resilient import pdfs
 from resilient.logger import Logger
 
 
@@ -26,16 +28,9 @@ class SelectionStrategy(BaseEstimator):
             super(SelectionStrategy, self).__setattr__(key, value)
 
     @abstractmethod
-    def get_indices(self, weights):
+    def get_indices(self, weights, random_state):
         """
         Returns the indices of the corresponding classifiers, using their weights.
-        """
-        pass
-
-    @abstractmethod
-    def get_params_ranges(self):
-        """
-        Returns a dict of arrays, each containing the possible values for the corresponding param
         """
         pass
 
@@ -55,28 +50,23 @@ class SelectionStrategy(BaseEstimator):
 
 class SelectBestPercent(SelectionStrategy):
 
-    def __init__(self, percent=0.10, steps=50):
+    def __init__(self, percent=0.10):
         super(SelectBestPercent, self).__init__(percent=percent)
-        self.steps = steps
 
-    def get_indices(self, weights):
+    def get_indices(self, weights, random_state):
         indices = weights.argsort()
         k = int(round(self.percent * len(weights)))
         k = 1 if k < 1 else k
         # Higher values at the end of the list
         return indices[-k:]
 
-    def get_params_ranges(self):
-        return {"percent": linspace(0, 1, self.steps+1)[1:]}
-
 
 class SelectByWeightSum(SelectionStrategy):
 
-    def __init__(self, threshold=0.10, steps=500):
+    def __init__(self, threshold=0.10):
         super(SelectByWeightSum, self).__init__(threshold=threshold)
-        self.steps = steps
 
-    def get_indices(self, weights):
+    def get_indices(self, weights, random_state):
         weights = weights / sum(weights)
         indices = weights.argsort()[::-1]
         partial_sum = 0
@@ -86,8 +76,18 @@ class SelectByWeightSum(SelectionStrategy):
                 return indices[:k+1]
         return indices
 
-    def get_params_ranges(self):
-        return {"threshold": linspace(0, 1, self.steps+1)[1:]}
+
+class SelectRandomPercent(SelectionStrategy):
+
+    def __init__(self, percent=0.10):
+        super(SelectRandomPercent, self).__init__(percent=percent)
+
+    def get_indices(self, weights, random_state):
+        weights = numpy.transpose(array2d([1 / w for w in weights]))
+        p = pdfs.DistanceExponential().probabilities(weights, mean=[0])
+        k = int(round(self.percent * len(weights)))
+        k = 1 if k < 1 else k
+        return check_random_state(self.random_state).choice(len(weights), k, p=p, replace=False)
 
 
 class SelectByWeightThreshold(SelectionStrategy):
@@ -96,16 +96,13 @@ class SelectByWeightThreshold(SelectionStrategy):
         super(SelectByWeightThreshold, self).__init__(threshold=threshold)
         self.steps = steps
 
-    def get_indices(self, weights):
+    def get_indices(self, weights, random_state):
         weights = weights / sum(weights)
         indices = weights.argsort()[::-1]
         for k in xrange(len(indices)):
             if weights[indices[k]] < self.threshold:
                 return indices[:k]
         return indices
-
-    def get_params_ranges(self):
-        return {"threshold": linspace(0, 1, self.steps+1)[1:]}
 
 
 class SelectSkippingNearHypersphere(SelectionStrategy):
@@ -117,7 +114,7 @@ class SelectSkippingNearHypersphere(SelectionStrategy):
         self.max_similarity = max_similarity
         self.steps = steps
 
-    def get_indices(self, weights):
+    def get_indices(self, weights, random_state):
         inner_params = {key[6:]: value for key, value in self.params.iteritems() if key.startswith("inner_")}
         indices = weights.argsort()[::-1]
         filtered_weights = numpy.zeros(len(weights))
@@ -128,13 +125,7 @@ class SelectSkippingNearHypersphere(SelectionStrategy):
                 filtered_weights[i] = weights[i]
                 last_weight = filtered_weights[i]
         self.inner_strategy.params = inner_params
-        return self.inner_strategy.get_indices(filtered_weights)
-
-    def get_params_ranges(self):
-        ret = {"similarity": linspace(0, self.max_similarity, self.steps+1)}
-        inner = {"inner_" + key: value for key, value in self.inner_strategy.get_params_ranges().iteritems()}
-        ret.update(inner)
-        return ret
+        return self.inner_strategy.get_indices(filtered_weights, random_state)
 
     @staticmethod
     def _diff_percent(a, b):

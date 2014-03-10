@@ -13,19 +13,22 @@ from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
-x = 1
+x = 10
 
 with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
     d = arff.load(f)
     data = numpy.array([row[:-1] for row in d['data']])
     target = numpy.array([row[-1] for row in d['data']])
 
+    data = data[:100]
+    target = target[:100]
+
 
 config = {
     "seed": 1,
-    "n_iter": 10,
-    #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
-    "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
+    "n_iter": 2,
+    "cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
+    #"cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
     #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
     "dataset_name": "humvar_{:02d}".format(x),
     "data": data,
@@ -44,7 +47,7 @@ config = {
                 max_features=4
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(
-                n_estimators=101,
+                n_estimators=5,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
@@ -54,19 +57,20 @@ config = {
                 repeat=True
             )
         ),
+        selection_strategy=selection_strategies.SelectRandomPercent(
+            percent=0.10,
+            steps=500,
+            random_state=1
+        ),
         selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         ),
-        weighting_strategy=weighting_strategies.CentroidShadowWeightingStrategy(
-            threshold=0.1
+        weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
+            dist_measure=distance.euclidean
         ),
         multiply_by_weight=False,
         use_prob=True,
-        validation_percent=None
-    ),
-    "selection_strategy": selection_strategies.SelectBestPercent(
-        percent=0.10,
-        steps=100
+        validation_percent=0.10
     ),
     "rf": None,
     "use_mcc": False
