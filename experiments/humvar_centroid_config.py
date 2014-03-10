@@ -58,9 +58,7 @@ config = {
             )
         ),
         selection_strategy=selection_strategies.SelectRandomPercent(
-            percent=0.10,
-            steps=500,
-            random_state=1
+            percent=0.10
         ),
         selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5

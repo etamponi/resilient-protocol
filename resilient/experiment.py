@@ -1,5 +1,4 @@
 from datetime import datetime
-from itertools import product
 import sys
 
 import numpy
@@ -25,18 +24,7 @@ def to_matrix(scores):
     return ret
 
 
-def prepare_params_list(selection_strategy):
-    ranges = selection_strategy.get_params_ranges()
-    keys = selection_strategy.get_params_names()
-    ranges = [ranges[key] for key in keys]
-    tuples = list(product(*ranges))
-    params = [{key: t[i] for i, key in enumerate(keys)} for t in tuples]
-    return keys, params
-
-
-def run_experiment(dataset_name, data, target,
-                   pipeline, ensemble,
-                   cv_method, n_iter, seed, rf, use_mcc):
+def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc):
     sys.stdout = Logger()
 
     labels, target = unique(target, return_inverse=True)

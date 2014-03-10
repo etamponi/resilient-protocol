@@ -2,8 +2,6 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 from sklearn.base import BaseEstimator
-from sklearn.neighbors.ball_tree import array2d
-from sklearn.utils.random import check_random_state
 
 from resilient import pdfs
 from resilient.logger import Logger
@@ -15,7 +13,7 @@ __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 class SelectionStrategy(BaseEstimator):
     __metaclass__ = ABCMeta
 
-    def __init__(self, **params):
+    def __init__(self, params):
         self.params = params
 
     def __getattr__(self, item):
@@ -51,7 +49,7 @@ class SelectionStrategy(BaseEstimator):
 class SelectBestPercent(SelectionStrategy):
 
     def __init__(self, percent=0.10):
-        super(SelectBestPercent, self).__init__(percent=percent)
+        super(SelectBestPercent, self).__init__(dict(percent=percent))
 
     def get_indices(self, weights, random_state):
         indices = weights.argsort()
@@ -64,7 +62,7 @@ class SelectBestPercent(SelectionStrategy):
 class SelectByWeightSum(SelectionStrategy):
 
     def __init__(self, threshold=0.10):
-        super(SelectByWeightSum, self).__init__(threshold=threshold)
+        super(SelectByWeightSum, self).__init__(dict(threshold=threshold))
 
     def get_indices(self, weights, random_state):
         weights = weights / sum(weights)
@@ -79,21 +77,22 @@ class SelectByWeightSum(SelectionStrategy):
 
 class SelectRandomPercent(SelectionStrategy):
 
-    def __init__(self, percent=0.10):
-        super(SelectRandomPercent, self).__init__(percent=percent)
+    def __init__(self, percent=0.10, pdf=pdfs.DistanceExponential()):
+        super(SelectRandomPercent, self).__init__(dict(percent=percent))
+        self.pdf = pdf
 
     def get_indices(self, weights, random_state):
-        weights = numpy.transpose(array2d([1 / w for w in weights]))
-        p = pdfs.DistanceExponential().probabilities(weights, mean=[0])
+        weights = [[1 / w] for w in weights]
+        p = self.pdf.probabilities(weights)
         k = int(round(self.percent * len(weights)))
         k = 1 if k < 1 else k
-        return check_random_state(self.random_state).choice(len(weights), k, p=p, replace=False)
+        return random_state.choice(len(weights), size=k, p=p, replace=False)
 
 
 class SelectByWeightThreshold(SelectionStrategy):
 
     def __init__(self, threshold=0.10, steps=500):
-        super(SelectByWeightThreshold, self).__init__(threshold=threshold)
+        super(SelectByWeightThreshold, self).__init__(dict(threshold=threshold))
         self.steps = steps
 
     def get_indices(self, weights, random_state):
@@ -107,12 +106,10 @@ class SelectByWeightThreshold(SelectionStrategy):
 
 class SelectSkippingNearHypersphere(SelectionStrategy):
 
-    def __init__(self, similarity=0.01, inner_strategy=SelectBestPercent(), max_similarity=0.2, steps=20):
+    def __init__(self, similarity=0.01, inner_strategy=SelectBestPercent()):
         inner_params = {"inner_" + key: value for key, value in inner_strategy.params.iteritems()}
-        super(SelectSkippingNearHypersphere, self).__init__(similarity=similarity, **inner_params)
+        super(SelectSkippingNearHypersphere, self).__init__(dict(similarity=similarity, **inner_params))
         self.inner_strategy = inner_strategy
-        self.max_similarity = max_similarity
-        self.steps = steps
 
     def get_indices(self, weights, random_state):
         inner_params = {key[6:]: value for key, value in self.params.iteritems() if key.startswith("inner_")}

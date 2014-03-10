@@ -83,16 +83,16 @@ class CentroidRemovingNeighborsWeightingStrategy(WeightingStrategy):
 
     def prepare(self, inp, y):
         self.centroids_ = []
-        self.neighbors_ = []
+        self.neighbors_ = None
 
     def add_estimator(self, est, train_set, validation_set):
         self.centroids_.append(train_set.data.mean(axis=0))
 
     def weight_estimators(self, x):
-        if len(self.neighbors_) == 0:
+        if self.neighbors_ is None:
             self._prepare_neighbors()
         weights = np.array([1 / distance.euclidean(x, centroid) for centroid in self.centroids_])
-        indices = weights.argsort()[::-1]
+        indices = list(weights.argsort()[::-1])
         already_in = set([])
         for i in indices:
             already_in.add(i)

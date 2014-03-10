@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from itertools import product
+import operator
 
 import numpy
-import operator
 from scipy.ndimage import convolve
 from sklearn.base import BaseEstimator
 from sklearn.metrics import accuracy_score

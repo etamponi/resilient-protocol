@@ -55,6 +55,9 @@ config = {
                 repeat=True
             )
         ),
+        selection_strategy=selection_strategies.SelectBestPercent(
+            percent=0.20
+        ),
         selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         ),
@@ -64,10 +67,6 @@ config = {
         multiply_by_weight=False,
         use_prob=True,
         validation_percent=None
-    ),
-    "selection_strategy": selection_strategies.SelectBestPercent(
-        percent=0.20,
-        steps=50
     ),
     "rf": None,
     "use_mcc": False

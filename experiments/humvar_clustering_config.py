@@ -65,21 +65,18 @@ config = {
         weighting_strategy=CentroidBasedWeightingStrategy(
             dist_measure=distance.euclidean
         ),
+        selection_strategy=selection_strategies.SelectSkippingNearHypersphere(
+            similarity=0.01,
+            inner_strategy=selection_strategies.SelectBestPercent(
+                percent=0.20
+            )
+        ),
         multiply_by_weight=False,
         use_prob=True,
         validation_percent=None,
         selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5
         )
-    ),
-    "selection_strategy": selection_strategies.SelectSkippingNearHypersphere(
-        similarity=0.01,
-        inner_strategy=selection_strategies.SelectBestPercent(
-            percent=0.20,
-            steps=50
-        ),
-        max_similarity=0.2,
-        steps=31
     ),
     "rf": None,
     "use_mcc": False

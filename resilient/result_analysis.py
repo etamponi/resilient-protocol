@@ -1,7 +1,9 @@
 import sys
 import cPickle
+
 import numpy
 from sklearn.utils.validation import array2d
+
 
 __author__ = 'tamponi'
 
