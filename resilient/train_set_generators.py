@@ -25,27 +25,14 @@ class TrainSetGenerator(BaseEstimator):
         pass
 
 
-class CentroidBasedPDFTrainSetGenerator(TrainSetGenerator):
+class RandomCentroidPDFTrainSetGenerator(TrainSetGenerator):
 
-    def __init__(self, n_estimators=101, pdf=DistanceExponential(), percent=0.35, replace=False, repeat=False):
+    def __init__(self, n_estimators=101, pdf=DistanceExponential()):
         self.n_estimators = n_estimators
         self.pdf = pdf
-        self.percent = percent
-        self.replace = replace
-        self.repeat = repeat
 
     def get_sample_weights(self, inp, y, random_state):
         Logger.get().write("!Training", self.n_estimators, "estimators...")
-        for probs in self._get_probabilities(inp, random_state):
-            yield self._make_indices(len(inp), probs, random_state)
-
-    def _make_indices(self, l, probs, random_state):
-        indices = random_state.choice(l, size=int(self.percent*l), p=probs, replace=self.replace)
-        if not self.repeat:
-            indices = numpy.unique(indices)
-        return indices
-
-    def _get_probabilities(self, inp, random_state):
         mean_probs = numpy.ones(inp.shape[0]) / inp.shape[0]
         for i in range(self.n_estimators):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]

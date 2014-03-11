@@ -10,7 +10,7 @@ from resilient.logger import Logger
 
 from resilient.selection_optimizers import GridOptimizer
 from resilient.selection_strategies import SelectBestPercent
-from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
+from resilient.train_set_generators import RandomCentroidPDFTrainSetGenerator
 from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 
@@ -23,7 +23,7 @@ class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
-                 train_set_generator=CentroidBasedPDFTrainSetGenerator()):
+                 train_set_generator=RandomCentroidPDFTrainSetGenerator()):
         self.base_estimator = base_estimator
         self.train_set_generator = train_set_generator
 
@@ -32,15 +32,15 @@ class TrainingStrategy(BaseEstimator):
         for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(inp, y, random_state)):
             Logger.get().write("!Training estimator:", (i+1))
             est = self._make_estimator(inp, y, sample_weights, random_state)
-            weighting_strategy.add_estimator(est, train_set)
+            weighting_strategy.add_estimator(est, inp, y, sample_weights)
             classifiers.append(est)
         return classifiers
 
-    def _make_estimator(self, train_set, random_state):
+    def _make_estimator(self, inp, y, sample_weights, random_state):
         seed = random_state.randint(MAX_INT)
         est = clone(self.base_estimator)
         est.set_params(random_state=check_random_state(seed))
-        est.fit(train_set.data, train_set.target)
+        est.fit(inp, y, sample_weight=sample_weights)
         return est
 
 

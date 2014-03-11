@@ -10,7 +10,7 @@ from sklearn.tree.tree import DecisionTreeClassifier
 
 from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
+from resilient.train_set_generators import RandomCentroidPDFTrainSetGenerator
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -46,18 +46,15 @@ config = {
         training_strategy=TrainingStrategy(
             base_estimator=DecisionTreeClassifier(
                 criterion="entropy",
-                max_depth=2,
+                max_depth=20,
                 max_features=4
             ),
-            train_set_generator=CentroidBasedPDFTrainSetGenerator(
+            train_set_generator=RandomCentroidPDFTrainSetGenerator(
                 n_estimators=1000,
                 pdf=pdfs.DistanceExponential(
                     tau=0.25,
                     dist_measure=distance.euclidean
-                ),
-                percent=2.5,
-                replace=True,
-                repeat=True
+                )
             )
         ),
         selection_strategy=selection_strategies.SelectByWeightSum(

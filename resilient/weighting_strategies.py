@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-import numpy as np
+import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
 from sklearn.neighbors.ball_tree import array2d
@@ -17,7 +17,7 @@ class WeightingStrategy(BaseEstimator):
         pass
 
     @abstractmethod
-    def add_estimator(self, est, train_set):
+    def add_estimator(self, est, inp, y, sample_weights):
         pass
 
     @abstractmethod
@@ -34,11 +34,11 @@ class CentroidBasedWeightingStrategy(WeightingStrategy):
     def prepare(self, inp, y):
         self.centroids_ = []
 
-    def add_estimator(self, est, train_set):
-        self.centroids_.append(train_set.data.mean(axis=0))
+    def add_estimator(self, est, inp, y, sample_weights):
+        self.centroids_.append(numpy.average(inp, axis=0, weights=sample_weights))
 
     def weight_estimators(self, x):
-        scores = np.array([1 / self.dist_measure(x, centroid) for centroid in self.centroids_])
+        scores = numpy.array([1 / self.dist_measure(x, centroid) for centroid in self.centroids_])
         return scores
 
 
@@ -51,13 +51,13 @@ class CentroidShadowWeightingStrategy(WeightingStrategy):
     def prepare(self, inp, y):
         self.centroids_ = []
 
-    def add_estimator(self, est, train_set):
-        self.centroids_.append(train_set.data.mean(axis=0))
+    def add_estimator(self, est, inp, y, sample_weights):
+        self.centroids_.append(numpy.average(inp, axis=0, weights=sample_weights))
 
     def weight_estimators(self, x):
         distance_vectors = [x - centroid for centroid in self.centroids_]
-        weights = np.array([1 / np.linalg.norm(v) for v in distance_vectors])
-        final_weights = np.zeros_like(weights)
+        weights = numpy.array([1 / numpy.linalg.norm(v) for v in distance_vectors])
+        final_weights = numpy.zeros_like(weights)
         while True:
             max_weight_index = weights.argmax()
             max_weight = weights[max_weight_index]
@@ -85,13 +85,13 @@ class CentroidRemovingNeighborsWeightingStrategy(WeightingStrategy):
         self.centroids_ = []
         self.neighbors_ = None
 
-    def add_estimator(self, est, train_set):
-        self.centroids_.append(train_set.data.mean(axis=0))
+    def add_estimator(self, est, inp, y, sample_weights):
+        self.centroids_.append(numpy.average(inp, axis=0, weights=sample_weights))
 
     def weight_estimators(self, x):
         if self.neighbors_ is None:
             self._prepare_neighbors()
-        weights = np.array([1 / distance.euclidean(x, centroid) for centroid in self.centroids_])
+        weights = numpy.array([1 / distance.euclidean(x, centroid) for centroid in self.centroids_])
         indices = list(weights.argsort()[::-1])
         already_in = set([])
         for i in indices:
