@@ -100,7 +100,7 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
             for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed))]
 
     os.system('taskset -p 0xffffffff %d' % os.getpid())
-    pool = Pool(min(multiprocessing.cpu_count()-1, len(args), 3), initializer=init_worker)
+    pool = Pool(min(multiprocessing.cpu_count()-1, len(args)), initializer=init_worker)
     try:
         results = pool.map_async(run_iter, args).get(1000000)
     except KeyboardInterrupt:
