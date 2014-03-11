@@ -1,11 +1,13 @@
 from copy import deepcopy
 from datetime import datetime
 from multiprocessing import Pool
-import sys
+import os
 
 import numpy
 from numpy.core.fromnumeric import transpose
+import signal
 from sklearn import clone
+from sklearn.externals.joblib.parallel import multiprocessing
 from sklearn.metrics import matthews_corrcoef
 from sklearn.utils.fixes import unique
 
@@ -52,7 +54,11 @@ def run_iter((ensemble, re_params, it, train_indices, test_indices, data, flt_da
     }
 
 
-def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc):
+def init_worker():
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
+def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc, results_dir):
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
     selection_strategy = ensemble.selection_strategy
@@ -86,12 +92,20 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     params_opt = [None] * n_iter
     rf_scores = numpy.zeros(n_iter)
 
-    pool = Pool()
     args = list((clone(ensemble), deepcopy(re_params),
                  it, lix, tix, numpy.copy(data), numpy.copy(flt_data), numpy.copy(target),
                  None if rf is None else clone(rf), use_mcc)
                 for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed)))
-    results = pool.map(run_iter, args)
+
+    os.system('taskset -p 0xffffffff %d' % os.getpid())
+    pool = Pool(min(multiprocessing.cpu_count()-1, len(args)), initializer=init_worker)
+    try:
+        results = pool.map_async(run_iter, args).get(1000000)
+    except KeyboardInterrupt:
+        pool.terminate()
+        pool.join()
+        raise
+
     for it, result in enumerate(results):
         re_scores[it] = result["re_scores"]
         scores_opt[it] = result["score_opt"]
@@ -132,12 +146,13 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     if rf is not None:
         Logger.get().write("{}RndFr: {} - Mean: {:.3f}".format(padding, rf_scores, rf_scores.mean()))
 
-    log_filename = "../results/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}".format(
+    log_filename = "../{results_dir}/{generator}/{selection}/{dataset}_{metric}_{date:%Y%m%d-%H%M-%S}".format(
         generator=ensemble.training_strategy.train_set_generator.__class__.__name__,
         selection=selection_strategy.__class__.__name__,
         dataset=dataset_name,
         metric="mcc" if use_mcc else "acc",
-        date=datetime.utcnow()
+        date=datetime.utcnow(),
+        results_dir=results_dir
     )
 
     Logger.get().save(log_filename, scores=re_scores, params=re_params, params_opt=params_opt)
