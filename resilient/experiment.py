@@ -2,10 +2,10 @@ from copy import deepcopy
 from datetime import datetime
 from multiprocessing import Pool
 import os
+import signal
 
 import numpy
 from numpy.core.fromnumeric import transpose
-import signal
 from sklearn import clone
 from sklearn.externals.joblib.parallel import multiprocessing
 from sklearn.metrics import matthews_corrcoef
@@ -22,8 +22,10 @@ HORIZ_LINE = "-" * 60
 
 def run_iter((ensemble, re_params, it, train_indices, test_indices, data, flt_data, target, rf, use_mcc)):
     Logger.get().write("!Running", (it+1), "iteration...")
+
     train_data, train_target = flt_data[train_indices], target[train_indices]
     test_data, test_target = flt_data[test_indices], target[test_indices]
+
     ensemble.fit(train_data, train_target)
 
     score_opt = ensemble.score(test_data, test_target, use_mcc=use_mcc)
@@ -92,13 +94,13 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
     params_opt = [None] * n_iter
     rf_scores = numpy.zeros(n_iter)
 
-    args = list((clone(ensemble), deepcopy(re_params),
-                 it, lix, tix, numpy.copy(data), numpy.copy(flt_data), numpy.copy(target),
-                 None if rf is None else clone(rf), use_mcc)
-                for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed)))
+    args = [(clone(ensemble), deepcopy(re_params),
+             it, lix, tix, numpy.copy(data), numpy.copy(flt_data), numpy.copy(target),
+             None if rf is None else clone(rf), use_mcc)
+            for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed))]
 
     os.system('taskset -p 0xffffffff %d' % os.getpid())
-    pool = Pool(min(multiprocessing.cpu_count()-1, len(args)), initializer=init_worker)
+    pool = Pool(min(multiprocessing.cpu_count()-1, len(args), 3), initializer=init_worker)
     try:
         results = pool.map_async(run_iter, args).get(1000000)
     except KeyboardInterrupt:

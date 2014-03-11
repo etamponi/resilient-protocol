@@ -1,13 +1,12 @@
+import sys
+
 import arff
-import cmath
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
-from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.tree.tree import DecisionTreeClassifier
-import sys
 
 from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
@@ -47,7 +46,7 @@ config = {
         training_strategy=TrainingStrategy(
             base_estimator=DecisionTreeClassifier(
                 criterion="entropy",
-                max_depth=20,
+                max_depth=2,
                 max_features=4
             ),
             train_set_generator=CentroidBasedPDFTrainSetGenerator(

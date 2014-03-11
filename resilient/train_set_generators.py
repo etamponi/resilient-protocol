@@ -21,7 +21,7 @@ class TrainSetGenerator(BaseEstimator):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def get_indices(self, inp, y, random_state):
+    def get_sample_weights(self, inp, y, random_state):
         pass
 
 
@@ -34,7 +34,7 @@ class CentroidBasedPDFTrainSetGenerator(TrainSetGenerator):
         self.replace = replace
         self.repeat = repeat
 
-    def get_indices(self, inp, y, random_state):
+    def get_sample_weights(self, inp, y, random_state):
         Logger.get().write("!Training", self.n_estimators, "estimators...")
         for probs in self._get_probabilities(inp, random_state):
             yield self._make_indices(len(inp), probs, random_state)
@@ -67,7 +67,7 @@ class GridPDFTrainSetGenerator(TrainSetGenerator):
         self.replace = replace
         self.repeat = repeat
 
-    def get_indices(self, inp, y, random_state):
+    def get_sample_weights(self, inp, y, random_state):
         cells = self._get_cells(inp)
         for probs in self._get_probabilities(inp, cells, random_state):
             yield self._make_indices(len(inp), probs, random_state)
@@ -162,7 +162,7 @@ class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
         self.replace = replace
         self.repeat = repeat
 
-    def get_indices(self, inp, y, random_state):
+    def get_sample_weights(self, inp, y, random_state):
         self.clustering.fit(inp, random_state)
         for probs in self._get_probabilities(inp):
             yield self._make_indices(len(inp), probs, random_state)

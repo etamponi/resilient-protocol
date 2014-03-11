@@ -5,10 +5,9 @@ from sklearn.tree.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique
 from sklearn import preprocessing
 from sklearn.utils.random import check_random_state
-from sklearn.utils.validation import array2d
 
-from resilient.dataset import Dataset
 from resilient.logger import Logger
+
 from resilient.selection_optimizers import GridOptimizer
 from resilient.selection_strategies import SelectBestPercent
 from resilient.train_set_generators import CentroidBasedPDFTrainSetGenerator
@@ -24,19 +23,16 @@ class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
-                 train_set_generator=CentroidBasedPDFTrainSetGenerator(),
-                 validation_percent=None):
+                 train_set_generator=CentroidBasedPDFTrainSetGenerator()):
         self.base_estimator = base_estimator
         self.train_set_generator = train_set_generator
-        self.validation_percent = validation_percent
 
     def train_estimators(self, inp, y, weighting_strategy, random_state):
         classifiers = []
-        for i, train_indices in enumerate(self.train_set_generator.get_indices(inp, y, random_state)):
+        for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(inp, y, random_state)):
             Logger.get().write("!Training estimator:", (i+1))
-            train_set, validation_set = self._get_train_validation_split(inp, y, train_indices, random_state)
-            est = self._make_estimator(train_set, random_state)
-            weighting_strategy.add_estimator(est, train_set, validation_set)
+            est = self._make_estimator(inp, y, sample_weights, random_state)
+            weighting_strategy.add_estimator(est, train_set)
             classifiers.append(est)
         return classifiers
 
@@ -46,24 +42,6 @@ class TrainingStrategy(BaseEstimator):
         est.set_params(random_state=check_random_state(seed))
         est.fit(train_set.data, train_set.target)
         return est
-
-    def _get_train_validation_split(self, inp, y, train_indices, random_state):
-        if self.validation_percent is not None:
-            unique_indices = np.unique(train_indices)
-            valid_indices = random_state.choice(len(unique_indices),
-                                                size=(len(unique_indices)*self.validation_percent), replace=False)
-            new_train_indices = []
-            new_valid_indices = []
-            for i in train_indices:
-                if i not in valid_indices:
-                    new_train_indices.append(i)
-                else:
-                    new_valid_indices.append(i)
-            train_set = Dataset(inp[new_train_indices], y[new_train_indices])
-            valid_set = Dataset(inp[new_valid_indices], y[new_valid_indices])
-            return train_set, valid_set
-        else:
-            return Dataset(inp[train_indices], y[train_indices]), Dataset(inp[train_indices], y[train_indices])
 
 
 class ResilientEnsemble(BaseEstimator, ClassifierMixin):
@@ -101,11 +79,14 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.n_classes_ = len(self.classes_)
         self.random_state_ = check_random_state(self.random_state)
 
+        n_samples = len(inp)
+
         if self.validation_percent is not None:
-            train_indices = self.random_state_.choice(len(inp), size=int(len(inp)*(1.0-self.validation_percent)),
+            train_indices = self.random_state_.choice(n_samples, size=int(n_samples*(1.0-self.validation_percent)),
                                                       replace=False)
             train_inp, train_y = inp[train_indices], y[train_indices]
         else:
+            train_indices = np.ones(n_samples, dtype=bool)
             train_inp, train_y = inp, y
 
         self.weighting_strategy.prepare(train_inp, train_y)
@@ -114,7 +95,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
         if self.validation_percent is not None:
             if self.validation_percent > 0.0:
-                valid_mask = np.ones(len(inp), dtype=bool)
+                valid_mask = np.ones(n_samples, dtype=bool)
                 valid_mask[train_indices] = False
             else:
                 valid_mask = train_indices
@@ -129,7 +110,6 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
     def predict_proba(self, inp):
         # inp is array-like, (N, D), one instance per row
         # output is array-like, (N, n_classes_), each row sums to one
-        inp = array2d(inp)
         if self.precomputed_probs_ is None:
             self._precompute(inp)
         prob = np.zeros((len(inp), self.n_classes_))

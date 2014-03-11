@@ -17,7 +17,7 @@ class WeightingStrategy(BaseEstimator):
         pass
 
     @abstractmethod
-    def add_estimator(self, est, train_set, validation_set):
+    def add_estimator(self, est, train_set):
         pass
 
     @abstractmethod
@@ -34,7 +34,7 @@ class CentroidBasedWeightingStrategy(WeightingStrategy):
     def prepare(self, inp, y):
         self.centroids_ = []
 
-    def add_estimator(self, est, train_set, validation_set):
+    def add_estimator(self, est, train_set):
         self.centroids_.append(train_set.data.mean(axis=0))
 
     def weight_estimators(self, x):
@@ -51,7 +51,7 @@ class CentroidShadowWeightingStrategy(WeightingStrategy):
     def prepare(self, inp, y):
         self.centroids_ = []
 
-    def add_estimator(self, est, train_set, validation_set):
+    def add_estimator(self, est, train_set):
         self.centroids_.append(train_set.data.mean(axis=0))
 
     def weight_estimators(self, x):
@@ -85,7 +85,7 @@ class CentroidRemovingNeighborsWeightingStrategy(WeightingStrategy):
         self.centroids_ = []
         self.neighbors_ = None
 
-    def add_estimator(self, est, train_set, validation_set):
+    def add_estimator(self, est, train_set):
         self.centroids_.append(train_set.data.mean(axis=0))
 
     def weight_estimators(self, x):
