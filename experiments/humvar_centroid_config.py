@@ -1,12 +1,13 @@
 import sys
 
 import arff
+import cmath
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation
+from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.tree.tree import DecisionTreeClassifier
 
 from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
@@ -44,27 +45,28 @@ config = {
     # "pipeline": None,
     "ensemble": ResilientEnsemble(
         training_strategy=TrainingStrategy(
-            base_estimator=DecisionTreeClassifier(
-                criterion="entropy",
-                max_depth=20,
-                max_features=4
+            base_estimator=RandomForestClassifier(
+                bootstrap=False,
+                n_estimators=25,
+                max_features=4,
+                criterion="entropy"
             ),
             train_set_generator=RandomCentroidPDFTrainSetGenerator(
-                n_estimators=1000,
-                pdf=pdfs.DistanceExponential(
-                    tau=0.25,
-                    dist_measure=distance.euclidean
+                n_estimators=100,
+                pdf=pdfs.DistanceNormal(
+                    precision=5,
+                    base=cmath.e
                 )
             )
         ),
-        selection_strategy=selection_strategies.SelectByWeightSum(
-            threshold=0.33
+        selection_strategy=selection_strategies.SelectBestPercent(
+            percent=0.60
         ),
         selection_optimizer=selection_optimizers.GridOptimizer(
             kernel_size=5,
             custom_ranges={
-                "percent": numpy.linspace(0.10, 0.40, 31),
-                "threshold": numpy.linspace(0, 1, 1001)[1:]
+                "percent": numpy.linspace(0, 1, 101)[1:],
+                "threshold": numpy.linspace(0, 1, 101)[1:]
             }
         ),
         weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
@@ -76,7 +78,7 @@ config = {
     ),
     "rf": None,
     "use_mcc": False,
-    "results_dir": "results_20140311_03"
+    "results_dir": "results_20140313_13"
 }
 
 

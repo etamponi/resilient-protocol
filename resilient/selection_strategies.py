@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 from sklearn.base import BaseEstimator
+from sklearn.utils import array2d
 
 from resilient import pdfs
 from resilient.logger import Logger
@@ -79,16 +80,17 @@ class SelectByWeightSum(SelectionStrategy):
 
 class SelectRandomPercent(SelectionStrategy):
 
-    def __init__(self, percent=0.10, pdf=pdfs.DistanceExponential()):
+    def __init__(self, percent=0.10, pdf=pdfs.DistanceExponential(), use_min_as_mean=False):
         super(SelectRandomPercent, self).__init__(percent=percent)
         self.pdf = pdf
+        self.use_min_as_mean = use_min_as_mean
 
     def get_indices(self, weights, random_state):
-        weights = [[1 / w] for w in weights]
-        p = self.pdf.probabilities(weights)
-        k = int(round(self.percent * len(weights)))
+        distances = array2d([[1 / w] for w in weights])
+        p = self.pdf.probabilities(distances, mean=distances.min() if self.use_min_as_mean else 0)
+        k = int(round(self.percent * len(distances)))
         k = 1 if k < 1 else k
-        return random_state.choice(len(weights), size=k, p=p, replace=False)
+        return random_state.choice(len(distances), size=k, p=p, replace=False)
 
 
 class SelectByWeightThreshold(SelectionStrategy):

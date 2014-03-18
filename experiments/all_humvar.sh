@@ -18,4 +18,4 @@ do
     PYTHONPATH=".." python ./$1 $i || exit 1
 done
 
-exit 0
+paplay /usr/share/sounds/gnome/default/alerts/bark.ogg & exit 0
