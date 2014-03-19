@@ -17,71 +17,69 @@ from resilient.train_set_generators import RandomCentroidPDFTrainSetGenerator
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
-if len(sys.argv) > 1:
-    x = int(sys.argv[1])
-else:
-    x = 1
+def get_config():
+    x, results_dir = int(sys.argv[1]), sys.argv[2]
 
-with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
-    d = arff.load(f)
-    data = numpy.array([row[:-1] for row in d['data']])
-    target = numpy.array([row[-1] for row in d['data']])
+    with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
+        d = arff.load(f)
+        data = numpy.array([row[:-1] for row in d['data']])
+        target = numpy.array([row[-1] for row in d['data']])
 
-
-config = {
-    "seed": 1,
-    "n_iter": 10,
-    #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n_iter=n, test_size=0.1, random_state=s),
-    "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
-    #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
-    "dataset_name": "humvar_{:02d}".format(x),
-    "data": data,
-    "target": target,
-    "pipeline": Pipeline(
-        steps=[
-            ("scale", MinMaxScaler())
-        ]
-    ),
-    # "pipeline": None,
-    "ensemble": ResilientEnsemble(
-        training_strategy=TrainingStrategy(
-            base_estimator=RandomForestClassifier(
-                bootstrap=False,
-                n_estimators=25,
-                max_features=4,
-                criterion="entropy"
-            ),
-            train_set_generator=RandomCentroidPDFTrainSetGenerator(
-                n_estimators=100,
-                pdf=pdfs.DistanceNormal(
-                    precision=5,
-                    base=cmath.e
+    config = {
+        "seed": 1,
+        "n_iter": 10,
+        #"cv_method": lambda t, n, s: cross_validation.StratifiedShuffleSplit(t, n, test_size=0.1, random_state=s),
+        "cv_method": lambda t, n, s: cross_validation.StratifiedKFold(t, n_folds=n),
+        #"cv_method": lambda t, n, s: cross_validation.KFold(len(t), n_folds=n, random_state=s),
+        "dataset_name": "humvar_{:02d}".format(x),
+        "data": data,
+        "target": target,
+        "pipeline": Pipeline(
+            steps=[
+                ("scale", MinMaxScaler())
+            ]
+        ),
+        # "pipeline": None,
+        "ensemble": ResilientEnsemble(
+            training_strategy=TrainingStrategy(
+                base_estimator=RandomForestClassifier(
+                    bootstrap=False,
+                    n_estimators=10,
+                    max_features=4,
+                    criterion="entropy"
+                ),
+                train_set_generator=RandomCentroidPDFTrainSetGenerator(
+                    n_estimators=100,
+                    pdf=pdfs.DistanceExponential(
+                        tau=0.20,
+                        base=10
+                    )
                 )
-            )
+            ),
+            selection_strategy=selection_strategies.SelectBestPercent(
+                percent=0.60
+            ),
+            selection_optimizer=selection_optimizers.GridOptimizer(
+                kernel_size=5,
+                custom_ranges={
+                    "percent": numpy.linspace(0, 1, 101)[1:],
+                    "threshold": numpy.linspace(0, 1, 101)[1:]
+                }
+            ),
+            weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
+                dist_measure=distance.euclidean
+            ),
+            multiply_by_weight=False,
+            use_prob=True,
+            validation_percent=None
         ),
-        selection_strategy=selection_strategies.SelectBestPercent(
-            percent=0.60
-        ),
-        selection_optimizer=selection_optimizers.GridOptimizer(
-            kernel_size=5,
-            custom_ranges={
-                "percent": numpy.linspace(0, 1, 101)[1:],
-                "threshold": numpy.linspace(0, 1, 101)[1:]
-            }
-        ),
-        weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
-            dist_measure=distance.euclidean
-        ),
-        multiply_by_weight=False,
-        use_prob=True,
-        validation_percent=None
-    ),
-    "rf": None,
-    "use_mcc": False,
-    "results_dir": "results_20140313_13"
-}
+        "rf": None,
+        "use_mcc": False,
+        "results_dir": results_dir
+    }
+    return config
 
 
 if __name__ == "__main__":
     from resilient import experiment as exp
-    exp.run_experiment(**config)
+    exp.run_experiment(**get_config())

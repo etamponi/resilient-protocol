@@ -17,7 +17,7 @@ from resilient.logger import Logger
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
-HORIZ_LINE = "-" * 60
+HORIZ_LINE = "-" * 82
 
 
 def run_iter((ensemble, re_params, it, train_indices, test_indices, data, flt_data, target, rf, use_mcc)):

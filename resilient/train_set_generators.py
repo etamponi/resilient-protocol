@@ -38,7 +38,7 @@ class RandomCentroidPDFTrainSetGenerator(TrainSetGenerator):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]
             probs = self.pdf.probabilities(inp, mean=mean)
             for j, x in enumerate(inp):
-                mean_probs[j] *= log(1 + distance.euclidean(x, mean)).real
+                mean_probs[j] *= distance.euclidean(x, mean)  # log(1 + distance.euclidean(x, mean)).real
             mean_probs = mean_probs / mean_probs.sum()
             yield probs
 
