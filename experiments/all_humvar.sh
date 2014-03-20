@@ -13,7 +13,7 @@ then
     echo ${USAGE} && exit ${E_WRONGARGS}
 fi
 
-RESULTS_DIR="$(cd ../results; python ./next_results_dir.py)"
+RESULTS_DIR="$(cd ../; python ./next_results_dir.py)"
 for i in `seq 1 10`
 do
     PYTHONPATH=".." python ./$1 ${i} ${RESULTS_DIR} || exit 1
