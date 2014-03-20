@@ -1,6 +1,6 @@
-from cmath import log
 from abc import ABCMeta, abstractmethod
 from math import floor
+import cmath
 
 import numpy
 from scipy.spatial import distance
@@ -38,7 +38,7 @@ class RandomCentroidPDFTrainSetGenerator(TrainSetGenerator):
             mean = inp[random_state.choice(len(inp), p=mean_probs)]
             probs = self.pdf.probabilities(inp, mean=mean)
             for j, x in enumerate(inp):
-                mean_probs[j] *= distance.euclidean(x, mean)  # log(1 + distance.euclidean(x, mean)).real
+                mean_probs[j] *= cmath.log(1 + distance.euclidean(x, mean)).real
             mean_probs = mean_probs / mean_probs.sum()
             yield probs
 
@@ -98,16 +98,25 @@ class ClusterAlgorithmWrapper(BaseEstimator):
     
 class KMeansWrapper(ClusterAlgorithmWrapper):
     
-    def __init__(self, n_estimators=101, use_mini_batch=True):
+    def __init__(self, n_estimators=101, max_iter=300, use_mini_batch=True):
         self.n_estimators = n_estimators
+        self.max_iter = max_iter
         self.use_mini_batch = use_mini_batch
         self.algorithm_ = None
     
     def fit(self, inp, random_state):
         if self.use_mini_batch:
-            self.algorithm_ = MiniBatchKMeans(n_clusters=self.n_estimators, random_state=random_state).fit(inp)
+            self.algorithm_ = MiniBatchKMeans(
+                n_clusters=self.n_estimators,
+                max_iter=self.max_iter,
+                random_state=random_state
+            ).fit(inp)
         else:
-            self.algorithm_ = KMeans(n_clusters=self.n_estimators, random_state=random_state).fit(inp)
+            self.algorithm_ = KMeans(
+                n_clusters=self.n_estimators,
+                max_iter=self.max_iter,
+                random_state=random_state
+            ).fit(inp)
     
     def get_centroids(self):
         return self.algorithm_.cluster_centers_
@@ -141,27 +150,13 @@ class MeanShiftWrapper(ClusterAlgorithmWrapper):
 
 class ClusteringPDFTrainSetGenerator(TrainSetGenerator):
 
-    def __init__(self, clustering=KMeansWrapper(n_estimators=51),
-                 pdf=DistanceExponential(), percent=1.0, replace=True, repeat=True):
+    def __init__(self, clustering=KMeansWrapper(n_estimators=51), pdf=DistanceExponential()):
         self.clustering = clustering
         self.pdf = pdf
-        self.percent = percent
-        self.replace = replace
-        self.repeat = repeat
 
     def get_sample_weights(self, inp, y, random_state):
         self.clustering.fit(inp, random_state)
-        for probs in self._get_probabilities(inp):
-            yield self._make_indices(len(inp), probs, random_state)
-
-    def _get_probabilities(self, inp):
         centroids = self.clustering.get_centroids()
         Logger.get().write("!Training", len(centroids), "estimators...")
         for centroid in centroids:
             yield self.pdf.probabilities(inp, mean=centroid)
-
-    def _make_indices(self, size, probs, random_state):
-        indices = random_state.choice(size, size=int(self.percent*size), p=probs, replace=self.replace)
-        if not self.repeat:
-            indices = numpy.unique(indices)
-        return indices

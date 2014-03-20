@@ -19,4 +19,5 @@ do
     PYTHONPATH=".." python ./$1 ${i} ${RESULTS_DIR} || exit 1
 done
 
+echo "Results directory: ${RESULTS_DIR}"
 paplay /usr/share/sounds/gnome/default/alerts/bark.ogg & exit 0

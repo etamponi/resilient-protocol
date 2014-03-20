@@ -1,7 +1,6 @@
 import sys
 
 import arff
-import cmath
 import numpy
 from scipy.spatial import distance
 from sklearn import cross_validation

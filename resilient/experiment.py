@@ -60,7 +60,8 @@ def init_worker():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc, results_dir):
+def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_iter, seed, rf, use_mcc, results_dir,
+                   run_async=True):
     labels, target = unique(target, return_inverse=True)
     flt_data = pipeline.fit_transform(data) if pipeline is not None else data
     selection_strategy = ensemble.selection_strategy
@@ -100,13 +101,16 @@ def run_experiment(dataset_name, data, target, pipeline, ensemble, cv_method, n_
             for it, (lix, tix) in enumerate(cv_method(target, n_iter, seed))]
 
     os.system('taskset -p 0xffffffff %d' % os.getpid())
-    pool = Pool(min(multiprocessing.cpu_count()-1, len(args)), initializer=init_worker)
-    try:
-        results = pool.map_async(run_iter, args).get(1000000)
-    except KeyboardInterrupt:
-        pool.terminate()
-        pool.join()
-        raise
+    if run_async:
+        pool = Pool(min(multiprocessing.cpu_count()-1, len(args)/2), initializer=init_worker)
+        try:
+            results = pool.map_async(run_iter, args).get(1000000)
+        except KeyboardInterrupt:
+            pool.terminate()
+            pool.join()
+            raise
+    else:
+        results = map(run_iter, args)
 
     for it, result in enumerate(results):
         re_scores[it] = result["re_scores"]

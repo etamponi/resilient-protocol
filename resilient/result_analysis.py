@@ -1,7 +1,7 @@
 import sys
 import cPickle
-from matplotlib import pyplot
 
+from matplotlib import pyplot
 import numpy
 from sklearn.utils.validation import array2d
 
@@ -35,6 +35,5 @@ if __name__ == '__main__':
     Logger.get().write("Best result: {:.4f} +- {:.4f} with param {:.3f}".format(
         best_mean_score, best_mean_score_stddev, best_mean_param
     ))
-    print len(best_mean_score_row)
     pyplot.plot(params, mean_scores)
     pyplot.show()
