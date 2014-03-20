@@ -42,18 +42,18 @@ def get_config():
             training_strategy=TrainingStrategy(
                 base_estimator=RandomForestClassifier(
                     bootstrap=False,
-                    n_estimators=50,
+                    n_estimators=200,
                     max_features=4,
                     criterion="entropy"
                 ),
                 train_set_generator=train_set_generators.ClusteringPDFTrainSetGenerator(
                     clustering=train_set_generators.KMeansWrapper(
-                        n_estimators=20,
+                        n_estimators=5,
                         use_mini_batch=True,
                         max_iter=100
                     ),
                     pdf=pdfs.DistanceExponential(
-                        tau=0.05,
+                        tau=0.25,
                         base=2
                     )
                 )
@@ -64,7 +64,7 @@ def get_config():
             selection_optimizer=selection_optimizers.GridOptimizer(
                 kernel_size=5,
                 custom_ranges={
-                    "percent": numpy.linspace(0, 1, 101)[1:],
+                    "percent": numpy.linspace(0, 1, 11)[1:],
                     "threshold": numpy.linspace(0, 1, 101)[1:]
                 }
             ),
@@ -78,7 +78,7 @@ def get_config():
         "rf": None,
         "use_mcc": False,
         "results_dir": results_dir,
-        "run_async": True
+        "run_async": False
     }
     return config
 

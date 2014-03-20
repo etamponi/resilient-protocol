@@ -35,5 +35,5 @@ if __name__ == '__main__':
     Logger.get().write("Best result: {:.4f} +- {:.4f} with param {:.3f}".format(
         best_mean_score, best_mean_score_stddev, best_mean_param
     ))
-    pyplot.plot(params, mean_scores)
+    pyplot.plot(params, mean_scores, "r")
     pyplot.show()

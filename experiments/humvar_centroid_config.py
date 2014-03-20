@@ -16,13 +16,24 @@ from resilient.train_set_generators import RandomCentroidPDFTrainSetGenerator
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
+precision = None
+
+
+def mahalanobis(u, v):
+    return distance.mahalanobis(u, v, precision)
+
+
 def get_config():
+    global precision
     x, results_dir = int(sys.argv[1]), sys.argv[2]
 
     with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
         d = arff.load(f)
         data = numpy.array([row[:-1] for row in d['data']])
         target = numpy.array([row[-1] for row in d['data']])
+
+        # data = MinMaxScaler().fit_transform(data)
+        # precision = EmpiricalCovariance().fit(data).get_precision()
 
     config = {
         "seed": 1,
@@ -43,15 +54,16 @@ def get_config():
             training_strategy=TrainingStrategy(
                 base_estimator=RandomForestClassifier(
                     bootstrap=False,
-                    n_estimators=10,
+                    n_estimators=50,
                     max_features=4,
                     criterion="entropy"
                 ),
                 train_set_generator=RandomCentroidPDFTrainSetGenerator(
-                    n_estimators=100,
+                    n_estimators=20,
                     pdf=pdfs.DistanceExponential(
-                        tau=0.20,
-                        base=10
+                        tau=0.05,
+                        base=2,
+                        dist_measure=distance.euclidean
                     )
                 )
             ),
@@ -61,20 +73,21 @@ def get_config():
             selection_optimizer=selection_optimizers.GridOptimizer(
                 kernel_size=5,
                 custom_ranges={
-                    "percent": numpy.linspace(0, 1, 101)[1:],
+                    "percent": numpy.linspace(0, 1, 21)[1:],
                     "threshold": numpy.linspace(0, 1, 101)[1:]
                 }
             ),
             weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
                 dist_measure=distance.euclidean
             ),
-            multiply_by_weight=False,
+            multiply_by_weight=True,
             use_prob=True,
             validation_percent=None
         ),
         "rf": None,
         "use_mcc": False,
-        "results_dir": results_dir
+        "results_dir": results_dir,
+        "run_async": True
     }
     return config
 
