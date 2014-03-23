@@ -30,12 +30,12 @@ class Logger(object):
         self.lock = Lock()
 
     def write(self, *tokens):
+        self.lock.acquire()
         message = " ".join(str(token) for token in tokens)
         if message.startswith("!"):
             message = "{:6d}: {}".format(os.getpid(), message[1:])
         else:
             self.log_string += message + "\n"
-        self.lock.acquire()
         print message
         self.lock.release()
 

@@ -8,32 +8,20 @@ from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies
+from resilient import pdfs, selection_strategies, selection_optimizers, weighting_strategies, train_set_generators
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
-from resilient.train_set_generators import RandomCentroidPDFTrainSetGenerator
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
-precision = None
-
-
-def mahalanobis(u, v):
-    return distance.mahalanobis(u, v, precision)
-
-
 def get_config():
-    global precision
     x, results_dir = int(sys.argv[1]), sys.argv[2]
 
     with open("../humvar_10fold/humvar_{:02d}.arff".format(x)) as f:
         d = arff.load(f)
         data = numpy.array([row[:-1] for row in d['data']])
         target = numpy.array([row[-1] for row in d['data']])
-
-        # data = MinMaxScaler().fit_transform(data)
-        # precision = EmpiricalCovariance().fit(data).get_precision()
 
     config = {
         "seed": 1,
@@ -54,16 +42,19 @@ def get_config():
             training_strategy=TrainingStrategy(
                 base_estimator=RandomForestClassifier(
                     bootstrap=False,
-                    n_estimators=50,
+                    n_estimators=200,
                     max_features=4,
                     criterion="entropy"
                 ),
-                train_set_generator=RandomCentroidPDFTrainSetGenerator(
-                    n_estimators=20,
+                train_set_generator=train_set_generators.ClusteringPDFTrainSetGenerator(
+                    clustering=train_set_generators.KMeansWrapper(
+                        n_estimators=5,
+                        use_mini_batch=True,
+                        max_iter=100
+                    ),
                     pdf=pdfs.DistanceExponential(
-                        tau=0.05,
-                        base=2,
-                        dist_measure=distance.euclidean
+                        tau=0.25,
+                        base=2
                     )
                 )
             ),
@@ -73,25 +64,25 @@ def get_config():
             selection_optimizer=selection_optimizers.GridOptimizer(
                 kernel_size=5,
                 custom_ranges={
-                    "percent": numpy.linspace(0, 1, 21)[1:],
+                    "percent": numpy.linspace(0, 1, 11)[1:],
                     "threshold": numpy.linspace(0, 1, 101)[1:]
                 }
             ),
             weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(
                 dist_measure=distance.euclidean
             ),
-            multiply_by_weight=True,
+            multiply_by_weight=False,
             use_prob=True,
             validation_percent=None
         ),
         "rf": None,
         "use_mcc": False,
         "results_dir": results_dir,
-        "run_async": True
+        "run_async": False
     }
     return config
 
 
 if __name__ == "__main__":
     from resilient import experiment as exp
-    exp.run_experiment(**get_config())
+    exp.run_cv_training(**get_config())

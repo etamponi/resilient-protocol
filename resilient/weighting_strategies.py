@@ -27,7 +27,7 @@ class WeightingStrategy(BaseEstimator):
 
 class CentroidBasedWeightingStrategy(WeightingStrategy):
 
-    def __init__(self, dist_measure=distance.euclidean):
+    def __init__(self, dist_measure="euclidean"):
         self.dist_measure = dist_measure
         self.centroids_ = None
 
@@ -38,8 +38,11 @@ class CentroidBasedWeightingStrategy(WeightingStrategy):
         self.centroids_.append(numpy.average(inp, axis=0, weights=sample_weights))
 
     def weight_estimators(self, x):
-        scores = numpy.array([1 / self.dist_measure(x, centroid) for centroid in self.centroids_])
+        scores = numpy.array([1 / self._dist_measure(x, centroid) for centroid in self.centroids_])
         return scores
+
+    def _dist_measure(self, u, v):
+        return getattr(distance, self.dist_measure)(u, v)
 
 
 class CentroidShadowWeightingStrategy(WeightingStrategy):
