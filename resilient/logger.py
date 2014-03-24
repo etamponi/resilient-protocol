@@ -39,13 +39,18 @@ class Logger(object):
         print message
         self.lock.release()
 
+    @staticmethod
+    def dump(filename, **data):
+        Logger._ensure_dir(filename)
+        if len(data) > 0:
+            with open(filename + ".dat", "w") as f:
+                cPickle.dump(data, f)
+
     def save(self, log_name, **data):
         self._ensure_dir(log_name)
         with open(log_name + ".txt", "w") as f:
             f.write(self.log_string)
-        if len(data) > 0:
-            with open(log_name + ".dat", "w") as f:
-                cPickle.dump(data, f)
+        self.dump(log_name, **data)
 
     @staticmethod
     def _ensure_dir(log_file):

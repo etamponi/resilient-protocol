@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+import numpy
 
 from sklearn.base import BaseEstimator
 from sklearn.utils import array2d
@@ -22,6 +23,10 @@ class SelectionStrategy(BaseEstimator):
         """
         pass
 
+    @abstractmethod
+    def get_threshold_range(self, n_estimators):
+        pass
+
 
 class SelectBestPercent(SelectionStrategy):
 
@@ -34,6 +39,9 @@ class SelectBestPercent(SelectionStrategy):
         k = 1 if k < 1 else k
         # Higher values at the end of the list
         return indices[-k:]
+
+    def get_threshold_range(self, n_estimators):
+        return numpy.linspace(0, 1, n_estimators+1)[1:]
 
 
 class SelectRandomPercent(SelectionStrategy):
@@ -48,6 +56,9 @@ class SelectRandomPercent(SelectionStrategy):
         k = int(round(self.threshold * len(distances)))
         k = 1 if k < 1 else k
         return random_state.choice(len(distances), size=k, p=p, replace=False)
+
+    def get_threshold_range(self, n_estimators):
+        return numpy.linspace(0, 1, n_estimators+1)[1:]
 
 
 class SelectByWeightSum(SelectionStrategy):
@@ -65,6 +76,9 @@ class SelectByWeightSum(SelectionStrategy):
                 return indices[:k+1]
         return indices
 
+    def get_threshold_range(self, n_estimators):
+        return numpy.linspace(0, 1, 10*n_estimators+1)[1:]
+
 
 class SelectByWeightThreshold(SelectionStrategy):
 
@@ -78,3 +92,6 @@ class SelectByWeightThreshold(SelectionStrategy):
             if weights[k] >= self.threshold:
                 return indices.append(k)
         return indices
+
+    def get_threshold_range(self, n_estimators):
+        return numpy.linspace(0, 1, 10*n_estimators+1)[1:]

@@ -1,3 +1,4 @@
+import hashlib
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.tree.tree import DecisionTreeClassifier
@@ -24,9 +25,9 @@ class TrainingStrategy(BaseEstimator):
         self.base_estimator = base_estimator
         self.train_set_generator = train_set_generator
 
-    def train_estimators(self, inp, y, weighting_strategy, random_state):
+    def train_estimators(self, n, inp, y, weighting_strategy, random_state):
         classifiers = []
-        for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(inp, y, random_state)):
+        for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(n, inp, y, random_state)):
             Logger.get().write("!Training estimator:", (i+1))
             est = self._make_estimator(inp, y, sample_weights, random_state)
             weighting_strategy.add_estimator(est, inp, y, sample_weights)
@@ -45,6 +46,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
     def __init__(self,
                  preprocessing_pipeline=None,
+                 n_estimators=10,
                  training_strategy=TrainingStrategy(),
                  weighting_strategy=CentroidBasedWeightingStrategy(),
                  selection_strategy=SelectBestPercent(),
@@ -52,6 +54,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                  use_prob=True,
                  random_state=None):
         self.preprocessing_pipeline = preprocessing_pipeline
+        self.n_estimators = n_estimators
         self.training_strategy = training_strategy
         self.weighting_strategy = weighting_strategy
         self.selection_strategy = selection_strategy
@@ -80,7 +83,9 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             inp = self.pipeline_.transform(inp)
 
         self.weighting_strategy.prepare(inp, y)
-        self.classifiers_ = self.training_strategy.train_estimators(inp, y, self.weighting_strategy, self.random_state_)
+        self.classifiers_ = self.training_strategy.train_estimators(
+            self.n_estimators, inp, y, self.weighting_strategy, self.random_state_
+        )
 
         # Reset it to null because the previous line uses self.predict
         self.precomputed_probs_ = None
@@ -123,3 +128,16 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                 for j in range(len(self.classifiers_)):
                     self.precomputed_probs_[i][j] *= self.precomputed_weights_[i][j]
             Logger.get().write("!Computing", len(inp), "probabilities and weights:", (i+1))
+
+    def get_directory(self):
+        custom_state = self.random_state
+        custom_selection = self.selection_strategy
+        self.random_state = None
+        self.selection_strategy = None
+        filename = hashlib.md5(repr(self)).hexdigest()
+        self.random_state = custom_state
+        self.selection_strategy = custom_selection
+        return filename
+
+    def get_filename(self):
+        return self.get_directory() + "/ensemble"
