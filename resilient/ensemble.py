@@ -1,5 +1,6 @@
 import hashlib
-import numpy as np
+
+import numpy
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.tree.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique
@@ -14,20 +15,25 @@ from resilient.weighting_strategies import CentroidBasedWeightingStrategy
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
-MAX_INT = np.iinfo(np.int32).max
+MAX_INT = numpy.iinfo(numpy.int32).max
 
 
 class TrainingStrategy(BaseEstimator):
 
     def __init__(self,
                  base_estimator=DecisionTreeClassifier(max_features='auto'),
-                 train_set_generator=RandomCentroidPDFTrainSetGenerator()):
+                 train_set_generator=RandomCentroidPDFTrainSetGenerator(),
+                 random_sample=None):
         self.base_estimator = base_estimator
         self.train_set_generator = train_set_generator
+        self.random_sample = random_sample
 
     def train_estimators(self, n, inp, y, weighting_strategy, random_state):
         classifiers = []
         for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(n, inp, y, random_state)):
+            if self.random_sample is not None:
+                ix = random_state.choice(len(y), size=int(self.random_sample*len(y)), p=sample_weights, replace=True)
+                sample_weights = numpy.bincount(ix, minlength=len(y))
             Logger.get().write("!Training estimator:", (i+1))
             est = self._make_estimator(inp, y, sample_weights, random_state)
             weighting_strategy.add_estimator(est, inp, y, sample_weights)
@@ -97,7 +103,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         # output is array-like, (N, n_classes_), each row sums to one
         if self.precomputed_probs_ is None:
             self._precompute(inp)
-        prob = np.zeros((len(inp), self.n_classes_))
+        prob = numpy.zeros((len(inp), self.n_classes_))
         for i in range(len(inp)):
             active_indices = self.selection_strategy.get_indices(self.precomputed_weights_[i], self.random_state_)
             prob[i] = self.precomputed_probs_[i][active_indices].sum(axis=0)
@@ -110,17 +116,17 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         if self.pipeline_ is not None:
             inp = self.pipeline_.transform(inp)
         p = self.predict_proba(inp)
-        return self.classes_[np.argmax(p, axis=1)]
+        return self.classes_[numpy.argmax(p, axis=1)]
 
     def _precompute(self, inp):
-        self.precomputed_probs_ = np.zeros((len(inp), len(self.classifiers_), self.n_classes_))
-        self.precomputed_weights_ = np.zeros((len(inp), len(self.classifiers_)))
+        self.precomputed_probs_ = numpy.zeros((len(inp), len(self.classifiers_), self.n_classes_))
+        self.precomputed_weights_ = numpy.zeros((len(inp), len(self.classifiers_)))
         for i, x in enumerate(inp):
             for j, cls in enumerate(self.classifiers_):
                 prob = cls.predict_proba(x)[0]
                 if not self.use_prob:
                     max_index = prob.argmax()
-                    prob = np.zeros_like(prob)
+                    prob = numpy.zeros_like(prob)
                     prob[max_index] = 1
                 self.precomputed_probs_[i][j] = prob
             self.precomputed_weights_[i] = self.weighting_strategy.weight_estimators(x)
@@ -141,3 +147,9 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
     def get_filename(self):
         return self.get_directory() + "/ensemble"
+
+    def __eq__(self, other):
+        return isinstance(other, ResilientEnsemble) and self.get_directory() == other.get_directory()
+
+    def __hash__(self):
+        return hash(self.get_directory())

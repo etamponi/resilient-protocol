@@ -25,6 +25,21 @@ class WeightingStrategy(BaseEstimator):
         pass
 
 
+class SameWeight(WeightingStrategy):
+
+    def __init__(self):
+        self.weights_ = None
+
+    def prepare(self, inp, y):
+        self.weights_ = numpy.ones(0)
+
+    def add_estimator(self, est, inp, y, sample_weights):
+        self.weights_ = numpy.ones(1 + len(self.weights_))
+
+    def weight_estimators(self, x):
+        return self.weights_
+
+
 class CentroidBasedWeightingStrategy(WeightingStrategy):
 
     def __init__(self, dist_measure="euclidean"):

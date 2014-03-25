@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-import numpy
 
+import numpy
 from sklearn.base import BaseEstimator
 from sklearn.utils import array2d
 

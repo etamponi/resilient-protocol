@@ -1,8 +1,10 @@
 from abc import ABCMeta, abstractmethod
+
 import numpy
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import StratifiedKFold
 from sklearn.utils.random import check_random_state
+
 
 __author__ = 'tamponi'
 

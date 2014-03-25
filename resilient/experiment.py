@@ -5,7 +5,6 @@ import cPickle
 
 import arff
 import numpy
-from numpy.core.fromnumeric import transpose
 from sklearn import clone
 from sklearn.externals.joblib.parallel import multiprocessing
 from sklearn.metrics.metrics import confusion_matrix
@@ -28,8 +27,8 @@ def get_ensemble_dir(ensemble, results_dir="./results"):
     return "{}/{}".format(results_dir, ensemble.get_directory())
 
 
-def get_data_filename(ensemble, selection_strategy, dataset_name, cross_validation, results_dir="./results"):
-    filename = "{ensemble_dir}/{selection}/{dataset}/{cv}".format(
+def get_experiment_filename(ensemble, selection_strategy, dataset_name, cross_validation, results_dir="./results"):
+    filename = "{ensemble_dir}/{selection}/{dataset}/{cv}/experiment".format(
         ensemble_dir=get_ensemble_dir(ensemble, results_dir),
         selection=selection_strategy.__class__.__name__,
         dataset=dataset_name,
@@ -92,11 +91,11 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
 
     inp, y, labels = load_dataset(dataset_name, datasets_dir)
 
-    filename = get_data_filename(ensemble, selection_strategy, dataset_name, cross_validation, results_dir)
+    filename = get_experiment_filename(ensemble, selection_strategy, dataset_name, cross_validation, results_dir)
     data = get_data(filename)
 
     if data is None:
-        Logger.get().dump(get_ensemble_filename(ensemble, results_dir), ensemble=ensemble)
+        Logger.get().save(get_ensemble_filename(ensemble, results_dir), ensemble=ensemble)
 
         # Do an initial shuffle of the data, as the cv_method could be deterministic
         args = [(clone(ensemble), clone(selection_strategy), inp, y, train_indices, test_indices, seed, it)
@@ -109,6 +108,8 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
             pool = Pool(min(multiprocessing.cpu_count()-1, len(args)/2), initializer=init_worker)
             try:
                 results = numpy.array(pool.map_async(_run_cv_iter, args).get(1000000))
+                pool.close()
+                pool.join()
             except KeyboardInterrupt:
                 pool.terminate()
                 pool.join()
@@ -121,7 +122,7 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
     Logger.get().write(HORIZ_LINE)
     threshold_range = selection_strategy.get_threshold_range(ensemble.n_estimators)
     scores = results_to_scores(results, confusion_to_accuracy)
-    for i, row in enumerate(transpose(scores)):
+    for i, row in enumerate(numpy.transpose(scores)):
         Logger.get().write("{:11.3f}: {} - Mean score: {:.3f}".format(threshold_range[i], row, row.mean()))
 
     best_score_index_per_iter = scores.argmax(axis=1)

@@ -1,14 +1,10 @@
 from abc import ABCMeta, abstractmethod
-from math import floor
 import cmath
 
 import numpy
 from scipy.spatial import distance
 from sklearn.base import BaseEstimator
-from sklearn.cluster.affinity_propagation_ import AffinityPropagation
 from sklearn.cluster.k_means_ import MiniBatchKMeans, KMeans
-from sklearn.cluster.mean_shift_ import MeanShift
-from sklearn.utils.validation import array2d
 
 from resilient.logger import Logger
 from resilient.pdfs import DistanceExponential
@@ -52,8 +48,8 @@ class ClusterAlgorithmWrapper(BaseEstimator):
     @abstractmethod
     def get_centroids(self):
         pass
-    
-    
+
+
 class KMeansWrapper(ClusterAlgorithmWrapper):
     
     def __init__(self, max_iter=300, use_mini_batch=True):
