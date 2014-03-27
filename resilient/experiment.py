@@ -97,13 +97,11 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
     if data is None:
         Logger.get().save(get_ensemble_filename(ensemble, results_dir), ensemble=ensemble)
 
-        # Do an initial shuffle of the data, as the cv_method could be deterministic
-        args = [(clone(ensemble), clone(selection_strategy), inp, y, train_indices, test_indices, seed, it)
-                for it, (seed, train_indices, test_indices) in enumerate(cross_validation.build(y))]
-
         if run_async:
             def init_worker():
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
+            args = [(clone(ensemble), clone(selection_strategy), inp, y, train_indices, test_indices, seed, it)
+                    for it, (seed, train_indices, test_indices) in enumerate(cross_validation.build(y))]
             os.system('taskset -p 0xffffffff %d &> /dev/null' % os.getpid())
             pool = Pool(min(multiprocessing.cpu_count()-1, len(args)/2), initializer=init_worker)
             try:
@@ -115,6 +113,8 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
                 pool.join()
                 raise
         else:
+            args = [(ensemble, selection_strategy, inp, y, train_indices, test_indices, seed, it)
+                    for it, (seed, train_indices, test_indices) in enumerate(cross_validation.build(y))]
             results = numpy.array(map(_run_cv_iter, args))
     else:
         results = data["results"]

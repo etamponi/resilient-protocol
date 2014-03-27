@@ -25,6 +25,8 @@ class PDF(BaseEstimator):
             setattr(self, key, value)
 
         probs = numpy.array([self.probability(x) for x in inp])
+        if probs.min() < 0:
+            probs -= probs.min()
         probs = probs / probs.sum()
 
         for key, value in old_values.iteritems():
@@ -41,7 +43,7 @@ class DistanceNormal(PDF):
         self.sqdist_measure = sqdist_measure
 
     def probability(self, x):
-        return (self.base**(0.5 * self.precision * self._sqdist_measure(x, self.mean))).real
+        return (self.base**(-0.5 * self.precision * self._sqdist_measure(x, self.mean))).real
 
     def _sqdist_measure(self, u, v):
         return getattr(distance, self.sqdist_measure)(u, v)
@@ -62,16 +64,27 @@ class DistanceExponential(PDF):
         return getattr(distance, self.dist_measure)(u, v)
 
 
+class DistanceGeneralExp(PDF):
+
+    def __init__(self, mean=0, precision=0, base=cmath.e, power=2):
+        self.mean = mean
+        self.base = base
+        self.precision = precision
+        self.power = power
+
+    def probability(self, x):
+        return (self.base**(-0.5 * self.precision * distance.euclidean(x, self.mean)**self.power)).real
+
+
 class DistanceInverse(PDF):
 
-    def __init__(self, mean=0, power=1, offset=0.01, dist_measure="euclidean"):
+    def __init__(self, mean=0, power=1, dist_measure="euclidean"):
         self.mean = mean
         self.power = power
-        self.offset = offset
         self.dist_measure = dist_measure
 
     def probability(self, x):
-        return 1.0 / (self._dist_measure(x, self.mean) + self.offset)
+        return 1.0 / (self._dist_measure(x, self.mean) + 1)**self.power
 
     def _dist_measure(self, u, v):
         return getattr(distance, self.dist_measure)(u, v)
@@ -81,3 +94,13 @@ class Uniform(PDF):
 
     def probability(self, x):
         return 1.0
+
+
+class DistancePower(PDF):
+
+    def __init__(self, mean=0, power=1):
+        self.mean = mean
+        self.power = power
+
+    def probability(self, x):
+        return -distance.euclidean(x, self.mean)**self.power
