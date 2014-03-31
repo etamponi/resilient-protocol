@@ -47,7 +47,7 @@ def get_ensemble_experiments(ensemble, dataset_prefix, selection=best, results_d
         if experiment["dataset_name"].startswith(dataset_prefix) \
                 and experiment["selection_strategy"].__class__ == selection.__class__:
             experiment["ensemble"] = ensemble
-        experiments.append(experiment)
+            experiments.append(experiment)
     return experiments
 
 
@@ -71,10 +71,8 @@ def get_threshold_range(experiment):
 
 
 def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accuracy):
-    pyplot.figure()
     pyplot.hold(True)
-    pyplot.grid()
-    for i, exp in enumerate(experiments):
+    for exp in experiments:
         x = get_threshold_range(exp)
         scores = results_to_scores(exp["results"], scoring)
         pyplot.plot(x, scores.mean(axis=0), label=exp["dataset_name"])
@@ -85,3 +83,18 @@ def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accur
     font = FontProperties()
     font.set_size("small")
     pyplot.legend(loc="lower center", ncol=4, prop=font)
+    pyplot.grid()
+
+
+def plot_experiments_multi_cv(list_of_list, labels=None, scoring=confusion_to_accuracy):
+    pyplot.hold(True)
+    for i, experiments in enumerate(list_of_list):
+        x = get_threshold_range(experiments[0])
+        scores = results_to_scores(join_experimental_results(experiments), scoring)
+        if labels is not None:
+            label = labels[i]
+        else:
+            label = str(i)
+        pyplot.plot(x[::2], scores.mean(axis=0)[::2], label=label)
+    pyplot.legend(loc="lower center", ncol=3)
+    pyplot.grid()

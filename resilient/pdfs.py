@@ -64,7 +64,7 @@ class DistanceExponential(PDF):
         return getattr(distance, self.dist_measure)(u, v)
 
 
-class DistanceGeneralExp(PDF):
+class DistanceGeneralizedExponential(PDF):
 
     def __init__(self, mean=0, precision=0, base=cmath.e, power=2):
         self.mean = mean

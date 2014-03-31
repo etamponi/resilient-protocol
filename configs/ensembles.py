@@ -1,14 +1,41 @@
 import cmath
+
 from sklearn.ensemble.forest import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
 from resilient import train_set_generators, pdfs, weighting_strategies
-
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
+
+
+def generalized_exponential_ensemble(n_estimators, inner_estimators, precision, base, power, max_features,
+                                     random_sample=None, criterion="entropy", multiply_by_weight=False):
+    return ResilientEnsemble(
+        preprocessing_pipeline=Pipeline(
+            steps=[
+                ("scale", MinMaxScaler())
+            ]
+        ),
+        n_estimators=n_estimators,
+        training_strategy=TrainingStrategy(
+            base_estimator=RandomForestClassifier(
+                bootstrap=False,
+                n_estimators=inner_estimators,
+                max_features=max_features,
+                criterion=criterion
+            ),
+            train_set_generator=train_set_generators.RandomCentroidPDFTrainSetGenerator(
+                pdf=pdfs.DistanceGeneralizedExponential(precision=precision, base=base, power=power)
+            ),
+            random_sample=random_sample
+        ),
+        weighting_strategy=weighting_strategies.CentroidBasedWeightingStrategy(),
+        multiply_by_weight=multiply_by_weight,
+        use_prob=True
+    )
 
 
 def _ensemble_gen(n_estimators, inner_estimators, random_sample, criterion, max_features, pdf, weighting, mul, prob):
@@ -81,6 +108,9 @@ random_forest_1000_prob = _ensemble_gen(
 random_forest_50_20 = _ensemble_gen(
     50, 20, 1.0, "gini", 4, pdfs.Uniform(), weighting_strategies.SameWeight(), False, False
 )
+random_forest_100 = _ensemble_gen(
+    100, 1, 1.0, "gini", 4, pdfs.Uniform(), weighting_strategies.SameWeight(), False, False
+)
 
 base_2_50_20_10 = _ensemble_gen(
     50, 20, None, "entropy", 4, pdfs.DistanceExponential(tau=0.10, base=2),
@@ -122,6 +152,24 @@ normal_2_200_05_30 = _ensemble_gen(
 )
 normal_2_1000_1_60 = _ensemble_gen(
     1000, 1, None, "entropy", 4, pdfs.DistanceNormal(precision=60, base=2),
+    weighting_strategies.CentroidBasedWeightingStrategy(), False, True
+)
+
+normal_2_100_1_50 = _ensemble_gen(
+    100, 1, None, "entropy", 4, pdfs.DistanceNormal(precision=50, base=2),
+    weighting_strategies.CentroidBasedWeightingStrategy(), False, True
+)
+normal_2_100_1_40 = _ensemble_gen(
+    100, 1, None, "entropy", 4, pdfs.DistanceNormal(precision=40, base=2),
+    weighting_strategies.CentroidBasedWeightingStrategy(), False, True
+)
+normal_2_100_1_30 = _ensemble_gen(
+    100, 1, None, "entropy", 4, pdfs.DistanceNormal(precision=30, base=2),
+    weighting_strategies.CentroidBasedWeightingStrategy(), False, True
+)
+
+genexp_100_1_30_2_15 = _ensemble_gen(
+    100, 1, None, "entropy", 4, pdfs.DistanceGeneralizedExponential(precision=30, base=2, power=1.5),
     weighting_strategies.CentroidBasedWeightingStrategy(), False, True
 )
 

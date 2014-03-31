@@ -122,6 +122,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.precomputed_probs_ = numpy.zeros((len(inp), len(self.classifiers_), self.n_classes_))
         self.precomputed_weights_ = numpy.zeros((len(inp), len(self.classifiers_)))
         for i, x in enumerate(inp):
+            Logger.get().write("!Computing", len(inp), "probabilities and weights:", (i+1))
             for j, cls in enumerate(self.classifiers_):
                 prob = cls.predict_proba(x)[0]
                 if not self.use_prob:
@@ -133,7 +134,6 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             if self.multiply_by_weight:
                 for j in range(len(self.classifiers_)):
                     self.precomputed_probs_[i][j] *= self.precomputed_weights_[i][j]
-            Logger.get().write("!Computing", len(inp), "probabilities and weights:", (i+1))
 
     def get_directory(self):
         custom_state = self.random_state

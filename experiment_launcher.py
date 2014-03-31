@@ -15,10 +15,11 @@ def get_config(config_module, variable):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-e", "--ensemble", required=True)
-    parser.add_argument("-s", "--selection", required=True)
-    parser.add_argument("-c", "--crossval", required=True)
-    parser.add_argument("-d", "--datasets", required=True)
+    parser.add_argument("generator_params")
+    parser.add_argument("datasets")
+    parser.add_argument("-ss", "--selection-strategy", default="best")
+    parser.add_argument("-cv", "--cross-validation", default="not_nested_10fold")
+    parser.add_argument("-eg", "--ensemble-generator", default="generalized_exponential_ensemble")
     parser.add_argument("-rd", "--results-dir", default="./results")
     parser.add_argument("-dd", "--datasets-dir", default="./datasets")
     parser.add_argument("-em", "--ensemble-module", default="configs.ensembles")
@@ -27,9 +28,11 @@ if __name__ == "__main__":
     parser.add_argument("-a", "--async", action="store_true")
     args = parser.parse_args()
 
-    ensemble = get_config(args.ensemble_module, args.ensemble)
-    selection_strategy = get_config(args.selection_module, args.selection)
-    cross_validation = get_config(args.crossval_module, args.crossval)
+    selection_strategy = get_config(args.selection_module, args.selection_strategy)
+    cross_validation = get_config(args.crossval_module, args.cross_validation)
+
+    exec "from {} import {}".format(args.ensemble_module, args.ensemble_generator)
+    ensemble = eval("{}({})".format(args.ensemble_generator, args.generator_params))
 
     for dataset in args.datasets.split(" "):
         run_experiment(
