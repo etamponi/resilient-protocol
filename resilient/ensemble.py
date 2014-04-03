@@ -51,7 +51,7 @@ class TrainingStrategy(BaseEstimator):
 class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
     def __init__(self,
-                 preprocessing_pipeline=None,
+                 pipeline=None,
                  n_estimators=10,
                  training_strategy=TrainingStrategy(),
                  weighting_strategy=CentroidBasedWeightingStrategy(),
@@ -59,7 +59,7 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                  multiply_by_weight=False,
                  use_prob=True,
                  random_state=None):
-        self.preprocessing_pipeline = preprocessing_pipeline
+        self.pipeline = pipeline
         self.n_estimators = n_estimators
         self.training_strategy = training_strategy
         self.weighting_strategy = weighting_strategy
@@ -73,7 +73,6 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.classifiers_ = None
         self.precomputed_probs_ = None
         self.precomputed_weights_ = None
-        self.pipeline_ = None
         self.random_state_ = None
 
     def fit(self, inp, y):
@@ -84,9 +83,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         self.n_classes_ = len(self.classes_)
         self.random_state_ = check_random_state(self.random_state)
 
-        if self.preprocessing_pipeline is not None:
-            self.pipeline_ = self.preprocessing_pipeline.fit(inp)
-            inp = self.pipeline_.transform(inp)
+        if self.pipeline is not None:
+            inp = self.pipeline.fit_transform(inp)
 
         self.weighting_strategy.prepare(inp, y)
         self.classifiers_ = self.training_strategy.train_estimators(
@@ -113,8 +111,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
     def predict(self, inp):
         # inp is array-like, (N, D), one instance per row
         # output is array-like, N, one label per instance
-        if self.pipeline_ is not None:
-            inp = self.pipeline_.transform(inp)
+        if self.pipeline is not None:
+            inp = self.pipeline.transform(inp)
         p = self.predict_proba(inp)
         return self.classes_[numpy.argmax(p, axis=1)]
 

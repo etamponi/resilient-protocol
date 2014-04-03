@@ -45,7 +45,7 @@ def get_ensemble_experiments(ensemble, dataset_prefix, selection=best, results_d
         if experiment is None:
             continue
         if experiment["dataset_name"].startswith(dataset_prefix) \
-                and experiment["selection_strategy"].__class__ == selection.__class__:
+                and (selection is None or experiment["selection_strategy"].__class__ == selection.__class__):
             experiment["ensemble"] = ensemble
             experiments.append(experiment)
     return experiments
@@ -54,7 +54,7 @@ def get_ensemble_experiments(ensemble, dataset_prefix, selection=best, results_d
 def get_all_experiments(results_dir="./results"):
     experiments = {}
     for ens in get_tested_ensembles(results_dir):
-        experiments[ens] = get_ensemble_experiments(ens, results_dir)
+        experiments[ens] = get_ensemble_experiments(ens, "", selection=None, results_dir=results_dir)
     return experiments
 
 
@@ -86,10 +86,14 @@ def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accur
     pyplot.grid()
 
 
-def plot_experiments_multi_cv(list_of_list, labels=None, scoring=confusion_to_accuracy):
+def plot_experiments_multi_cv(list_of_list, labels=None, relative=True, scoring=confusion_to_accuracy):
     pyplot.hold(True)
     for i, experiments in enumerate(list_of_list):
         x = get_threshold_range(experiments[0])
+        if not relative \
+                and experiments[0]["ensemble"].selection_strategy.__class__ == selection_strategies.SelectBestPercent:
+            x *= experiments[0]["ensemble"].n_estimators
+
         scores = results_to_scores(join_experimental_results(experiments), scoring)
         if labels is not None:
             label = labels[i]

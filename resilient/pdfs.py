@@ -36,71 +36,46 @@ class PDF(BaseEstimator):
 
 class DistanceNormal(PDF):
 
-    def __init__(self, mean=0, precision=20, base=cmath.e, sqdist_measure="sqeuclidean"):
+    def __init__(self, mean=0, precision=20):
         self.mean = mean
         self.precision = precision
-        self.base = base
-        self.sqdist_measure = sqdist_measure
 
     def probability(self, x):
-        return (self.base**(-0.5 * self.precision * self._sqdist_measure(x, self.mean))).real
-
-    def _sqdist_measure(self, u, v):
-        return getattr(distance, self.sqdist_measure)(u, v)
+        return cmath.exp(-0.5 * self.precision * distance.sqeuclidean(x, self.mean)).real
 
 
 class DistanceExponential(PDF):
 
-    def __init__(self, mean=0, tau=0.15, base=cmath.e, dist_measure="euclidean"):
+    def __init__(self, mean=0, tau=0.15):
         self.mean = mean
-        self.base = base
         self.tau = tau
-        self.dist_measure = dist_measure
 
     def probability(self, x):
-        return (self.base**(-self._dist_measure(x, self.mean) / self.tau)).real
-
-    def _dist_measure(self, u, v):
-        return getattr(distance, self.dist_measure)(u, v)
+        return cmath.exp(-distance.euclidean(x, self.mean) / self.tau).real
 
 
 class DistanceGeneralizedExponential(PDF):
 
-    def __init__(self, mean=0, precision=0, base=cmath.e, power=2):
+    def __init__(self, mean=0, precision=0, power=2):
         self.mean = mean
-        self.base = base
         self.precision = precision
         self.power = power
 
     def probability(self, x):
-        return (self.base**(-0.5 * self.precision * distance.euclidean(x, self.mean)**self.power)).real
+        return cmath.exp(-0.5 * self.precision * distance.euclidean(x, self.mean)**self.power).real
 
 
 class DistanceInverse(PDF):
-
-    def __init__(self, mean=0, power=1, dist_measure="euclidean"):
-        self.mean = mean
-        self.power = power
-        self.dist_measure = dist_measure
-
-    def probability(self, x):
-        return 1.0 / (self._dist_measure(x, self.mean) + 1)**self.power
-
-    def _dist_measure(self, u, v):
-        return getattr(distance, self.dist_measure)(u, v)
-
-
-class Uniform(PDF):
-
-    def probability(self, x):
-        return 1.0
-
-
-class DistancePower(PDF):
 
     def __init__(self, mean=0, power=1):
         self.mean = mean
         self.power = power
 
     def probability(self, x):
-        return -distance.euclidean(x, self.mean)**self.power
+        return (distance.euclidean(x, self.mean) + 1)**(-self.power)
+
+
+class Uniform(PDF):
+
+    def probability(self, x):
+        return 1.0
