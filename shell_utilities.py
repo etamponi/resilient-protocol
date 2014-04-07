@@ -1,4 +1,7 @@
-# Import and define everything that can be useful during an interactive ipython session
+"""
+Import and define everything that can be useful during an interactive
+ipython session.
+"""
 
 from glob import glob
 
@@ -37,15 +40,19 @@ def get_tested_ensembles(results_dir="./results"):
     return ret
 
 
-def get_ensemble_experiments(ensemble, dataset_prefix, selection=best, results_dir="./results"):
+def get_ensemble_experiments(
+        ensemble, dataset_prefix,
+        selection_cls=None, results_dir="./results"):
     experiments = []
     ensemble_dir = ensemble.get_directory()
     for directory in glob(results_dir + "/" + ensemble_dir + "/*/*/*/"):
         experiment = get_data(directory + "/experiment")
         if experiment is None:
             continue
-        if experiment["dataset_name"].startswith(dataset_prefix) \
-                and (selection is None or experiment["selection_strategy"].__class__ == selection.__class__):
+        dataset_name = experiment["dataset_name"]
+        s_strategy_cls = type(experiment["selection_strategy"])
+        if dataset_name.startswith(dataset_prefix) and \
+                (selection_cls is None or selection_cls == s_strategy_cls):
             experiment["ensemble"] = ensemble
             experiments.append(experiment)
     return experiments
@@ -54,7 +61,9 @@ def get_ensemble_experiments(ensemble, dataset_prefix, selection=best, results_d
 def get_all_experiments(results_dir="./results"):
     experiments = {}
     for ens in get_tested_ensembles(results_dir):
-        experiments[ens] = get_ensemble_experiments(ens, "", selection=None, results_dir=results_dir)
+        experiments[ens] = get_ensemble_experiments(
+            ens, "", selection_cls=None, results_dir=results_dir
+        )
     return experiments
 
 
@@ -67,10 +76,13 @@ def join_experimental_results(experiments):
 
 
 def get_threshold_range(experiment):
-    return experiment["selection_strategy"].get_threshold_range(experiment["ensemble"].n_estimators)
+    return experiment["selection_strategy"].get_threshold_range(
+        experiment["ensemble"].n_estimators
+    )
 
 
-def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accuracy):
+def plot_experiments(experiments,
+                     plot_average=False, scoring=confusion_to_accuracy):
     pyplot.hold(True)
     for exp in experiments:
         x = get_threshold_range(exp)
@@ -78,7 +90,9 @@ def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accur
         pyplot.plot(x, scores.mean(axis=0), label=exp["dataset_name"])
     if plot_average:
         x = get_threshold_range(experiments[0])
-        scores = results_to_scores(join_experimental_results(experiments), scoring)
+        scores = results_to_scores(
+            join_experimental_results(experiments), scoring
+        )
         pyplot.plot(x, scores.mean(axis=0), label="Average", linewidth=2)
     font = FontProperties()
     font.set_size("small")
@@ -86,15 +100,16 @@ def plot_experiments(experiments, plot_average=False, scoring=confusion_to_accur
     pyplot.grid()
 
 
-def plot_experiments_multi_cv(list_of_list, labels=None, relative=True, scoring=confusion_to_accuracy):
+def plot_experiments_multi_cv(list_of_list, labels=None, relative=True,
+                              scoring=confusion_to_accuracy):
     pyplot.hold(True)
     for i, experiments in enumerate(list_of_list):
         x = get_threshold_range(experiments[0])
-        if not relative \
-                and experiments[0]["ensemble"].selection_strategy.__class__ == selection_strategies.SelectBestPercent:
+        if not relative:
             x *= experiments[0]["ensemble"].n_estimators
-
-        scores = results_to_scores(join_experimental_results(experiments), scoring)
+        scores = results_to_scores(
+            join_experimental_results(experiments), scoring
+        )
         if labels is not None:
             label = labels[i]
         else:

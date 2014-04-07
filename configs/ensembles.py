@@ -11,8 +11,10 @@ from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
-def generalized_exponential_ensemble(n_estimators, inner_estimators, precision, power, max_features,
-                                     scaler="minmax", weighting_power=None, random_sample=None, criterion="entropy"):
+def generalized_exponential_ensemble(
+        n_estimators, inner_estimators, precision, power, max_features,
+        scaler="minmax", weighting_power=None, random_sample=None,
+        criterion="entropy"):
     if weighting_power is None:
         weighting_power = 1
         multiply_by_weight = False
@@ -39,8 +41,10 @@ def generalized_exponential_ensemble(n_estimators, inner_estimators, precision, 
                 max_features=max_features,
                 criterion=criterion
             ),
-            train_set_generator=train_set_generators.RandomCentroidPDFTrainSetGenerator(
-                pdf=pdfs.DistanceGeneralizedExponential(precision=precision, power=power)
+            train_set_generator=
+            train_set_generators.RandomCentroidPDFTrainSetGenerator(
+                pdf=pdfs.DistanceGeneralizedExponential(precision=precision,
+                                                        power=power)
             ),
             random_sample=random_sample
         ),

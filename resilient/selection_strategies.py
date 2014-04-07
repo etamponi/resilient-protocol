@@ -16,7 +16,7 @@ class SelectionStrategy(BaseEstimator):
     @abstractmethod
     def get_indices(self, weights, random_state):
         """
-        Returns the indices of the corresponding classifiers, using their weights.
+        Return a list of indices, representing the selected classifiers.
         """
         pass
 
@@ -25,13 +25,18 @@ class SelectionStrategy(BaseEstimator):
         pass
 
 
-class NoSelect(SelectionStrategy):
+class StaticSelection(SelectionStrategy):
+
+    def __init__(self, threshold=0.10):
+        super(StaticSelection, self).__init__(threshold)
 
     def get_threshold_range(self, n_estimators):
         return numpy.linspace(0, 1, n_estimators+1)[1:]
 
     def get_indices(self, weights, random_state):
-        pass
+        k = int(round(self.threshold * len(weights)))
+        k = 1 if k < 1 else k
+        return range(k)
 
 
 class SelectBestPercent(SelectionStrategy):
