@@ -8,7 +8,7 @@ from glob import glob
 # noinspection PyUnresolvedReferences
 from matplotlib import pyplot
 from matplotlib.font_manager import FontProperties
-from resilient.experiment import get_data
+from resilient.experiment import *
 
 # noinspection PyUnresolvedReferences
 from configs import ensembles, crossvals, selections
@@ -19,6 +19,7 @@ from configs.crossvals import *
 # noinspection PyUnresolvedReferences
 from configs.selections import *
 from resilient.result_analysis import *
+from resilient.cross_validation import *
 
 __author__ = 'tamponi'
 
@@ -37,6 +38,18 @@ def get_tested_ensembles(results_dir="./results"):
         e = get_ensemble(d)
         if e is not None:
             ret.append(e)
+    return ret
+
+
+def get_ensembles_without_experiments(results_dir="./results"):
+    ret = []
+    for d in glob(results_dir + "/*/"):
+        e = get_ensemble(d)
+        if e is not None:
+            ensemble_dir = e.get_directory()
+            experiments = glob(results_dir + "/" + ensemble_dir + "/*/*/*/")
+            if len(experiments) == 0:
+                ret.append(e)
     return ret
 
 

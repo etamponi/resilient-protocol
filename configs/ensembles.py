@@ -11,28 +11,27 @@ from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
 
 
+minmax_pipeline = Pipeline(
+    steps=[("minmax", preprocessing.MinMaxScaler())]
+)
+
+standard_pipeline = Pipeline(
+    steps=[("standard", preprocessing.StandardScaler())]
+)
+
+
 def generalized_exponential_ensemble(
         n_estimators, inner_estimators, precision, power, max_features,
-        scaler="minmax", weighting_power=None, random_sample=None,
+        pipeline=minmax_pipeline, weighting_power=None, random_sample=None,
         criterion="entropy"):
     if weighting_power is None:
         weighting_power = 1
         multiply_by_weight = False
     else:
         multiply_by_weight = True
-    if scaler == "minmax":
-        scaler_obj = preprocessing.MinMaxScaler()
-    elif scaler == "standard":
-        scaler_obj = preprocessing.StandardScaler()
-    else:
-        raise Exception("Scaler must be \"minmax\" or \"standard\".")
 
     return ResilientEnsemble(
-        pipeline=Pipeline(
-            steps=[
-                (scaler, scaler_obj)
-            ]
-        ),
+        pipeline=pipeline,
         n_estimators=n_estimators,
         training_strategy=TrainingStrategy(
             base_estimator=RandomForestClassifier(

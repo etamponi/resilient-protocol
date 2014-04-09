@@ -2,8 +2,8 @@ from abc import ABCMeta, abstractmethod
 
 import numpy
 from sklearn.base import BaseEstimator
-from sklearn.cross_validation import StratifiedKFold
-from sklearn.utils.random import check_random_state
+from sklearn.cross_validation import StratifiedKFold, KFold
+from sklearn.utils import check_random_state
 
 
 __author__ = 'tamponi'
@@ -53,3 +53,40 @@ class NestedStratifiedKFold(CrossValidation):
 
     def total_runs(self):
         return self.n_runs * self.n_folds
+
+
+class ReadyKFold(CrossValidation):
+
+    def __init__(self, folds=10, seed=1):
+        self.folds = folds
+        self.seed = seed
+
+    def build(self, y):
+        random_state = check_random_state(self.seed)
+        delimiters = numpy.array(y == "---", dtype=bool)
+        splits = [[]]
+        for i, is_delimiter in enumerate(delimiters):
+            if is_delimiter:
+                splits.append([])
+            else:
+                splits[-1].append(i)
+        splits = splits[:-1]  # The last one is empty
+        n = len(splits)
+        for train_splits, test_splits in KFold(
+                n, n_folds=self.folds, shuffle=True, random_state=random_state):
+            seed = random_state.randint(numpy.iinfo(numpy.int32).max)
+            train_indices = [splits[i] for i in train_splits]
+            test_indices = [splits[i] for i in test_splits]
+            train_indices = reduce(lambda a, b: a + b, train_indices, [])
+            test_indices = reduce(lambda a, b: a + b, test_indices, [])
+            yield seed, train_indices, test_indices
+
+    def get_filename(self):
+        return "{name}_seed{seed:02d}_{folds:02d}".format(
+            name=self.__class__.__name__,
+            seed=self.seed,
+            folds=self.folds
+        )
+
+    def total_runs(self):
+        return self.folds

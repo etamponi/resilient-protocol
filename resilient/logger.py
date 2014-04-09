@@ -52,6 +52,9 @@ class Logger(object):
             f.write(self.log_string)
         self.dump(log_name, **data)
 
+    def clear(self):
+        self.log_string = ""
+
     @staticmethod
     def _ensure_dir(log_file):
         d = os.path.dirname(log_file)

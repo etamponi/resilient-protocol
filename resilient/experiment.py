@@ -71,6 +71,8 @@ def load_dataset(dataset_name, datasets_dir):
         y = numpy.array([row[-1] for row in d['data']])
     labels, y = numpy.unique(y, return_inverse=True)
     y = labels[y]
+    # "---" is a special label used by ReadyKFold, check there
+    labels = labels[labels != "---"]
     return inp, y, labels
 
 
@@ -146,4 +148,6 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
                       selection_strategy=selection_strategy,
                       dataset_name=dataset_name,
                       cross_validation=cross_validation)
+
+    Logger.get().clear()
     return data
