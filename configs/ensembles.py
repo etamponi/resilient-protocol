@@ -21,7 +21,7 @@ standard_pipeline = Pipeline(
 
 
 def generalized_exponential_ensemble(
-        n_estimators, inner_estimators, precision, power, max_features,
+        n_estimators, inner_estimators, max_features, precision, power,
         pipeline=minmax_pipeline, weighting_power=None, random_sample=None,
         criterion="entropy"):
     if weighting_power is None:

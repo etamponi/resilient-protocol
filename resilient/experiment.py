@@ -27,7 +27,9 @@ def get_ensemble_dir(ensemble, results_dir="./results"):
     return "{}/{}".format(results_dir, ensemble.get_directory())
 
 
-def get_experiment_filename(ensemble, selection_strategy, dataset_name, cross_validation, results_dir="./results"):
+def get_experiment_filename(ensemble, selection_strategy,
+                            dataset_name, cross_validation,
+                            results_dir="./results"):
     filename = "{ensemble_dir}/{selection}/{dataset}/{cv}/experiment".format(
         ensemble_dir=get_ensemble_dir(ensemble, results_dir),
         selection=selection_strategy.__class__.__name__,
@@ -64,7 +66,7 @@ def _run_cv_iter((ensemble, selection_strategy, inp, y, train_indices, test_indi
     return confusion_matrices
 
 
-def load_dataset(dataset_name, datasets_dir):
+def load_dataset(dataset_name, datasets_dir="./datasets"):
     with open("{}/{}.arff".format(datasets_dir, dataset_name)) as f:
         d = arff.load(f)
         inp = numpy.array([row[:-1] for row in d['data']])
@@ -77,7 +79,8 @@ def load_dataset(dataset_name, datasets_dir):
 
 
 def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
-                   datasets_dir="./datasets", results_dir="./results", run_async=False):
+                   datasets_dir="./datasets", results_dir="./results",
+                   run_async=False):
     Logger.get().write(HORIZ_LINE)
     Logger.get().write("Dataset name:", dataset_name)
     Logger.get().write(HORIZ_LINE)
@@ -115,6 +118,7 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
                 pool.join()
                 raise
         else:
+            ensemble = clone(ensemble)
             args = [(ensemble, selection_strategy, inp, y, train_indices, test_indices, seed, it)
                     for it, (seed, train_indices, test_indices) in enumerate(cross_validation.build(y))]
             results = numpy.array(map(_run_cv_iter, args))

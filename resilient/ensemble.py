@@ -30,9 +30,16 @@ class TrainingStrategy(BaseEstimator):
 
     def train_estimators(self, n, inp, y, weighting_strategy, random_state):
         classifiers = []
-        for i, sample_weights in enumerate(self.train_set_generator.get_sample_weights(n, inp, y, random_state)):
+        weight_generator = self.train_set_generator.get_sample_weights(
+            n, inp, y, random_state
+        )
+        for i, sample_weights in enumerate(weight_generator):
             if self.random_sample is not None:
-                ix = random_state.choice(len(y), size=int(self.random_sample*len(y)), p=sample_weights, replace=True)
+                ix = random_state.choice(
+                    len(y),
+                    size=int(self.random_sample*len(y)),
+                    p=sample_weights, replace=True
+                )
                 sample_weights = numpy.bincount(ix, minlength=len(y))
             Logger.get().write("!Training estimator:", (i+1))
             est = self._make_estimator(inp, y, sample_weights, random_state)
@@ -88,7 +95,8 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
 
         self.weighting_strategy.prepare(inp, y)
         self.classifiers_ = self.training_strategy.train_estimators(
-            self.n_estimators, inp, y, self.weighting_strategy, self.random_state_
+            self.n_estimators, inp, y,
+            self.weighting_strategy, self.random_state_
         )
 
         # Reset it to null because the previous line uses self.predict
@@ -103,7 +111,9 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
             self._precompute(inp)
         prob = numpy.zeros((len(inp), self.n_classes_))
         for i in range(len(inp)):
-            active_indices = self.selection_strategy.get_indices(self.precomputed_weights_[i], self.random_state_)
+            active_indices = self.selection_strategy.get_indices(
+                self.precomputed_weights_[i], self.random_state_
+            )
             prob[i] = self.precomputed_probs_[i][active_indices].sum(axis=0)
         preprocessing.normalize(prob, norm='l1', copy=False)
         return prob
@@ -117,10 +127,16 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         return self.classes_[numpy.argmax(p, axis=1)]
 
     def _precompute(self, inp):
-        self.precomputed_probs_ = numpy.zeros((len(inp), len(self.classifiers_), self.n_classes_))
-        self.precomputed_weights_ = numpy.zeros((len(inp), len(self.classifiers_)))
+        self.precomputed_probs_ = numpy.zeros(
+            (len(inp), len(self.classifiers_), self.n_classes_)
+        )
+        self.precomputed_weights_ = numpy.zeros(
+            (len(inp), len(self.classifiers_))
+        )
         for i, x in enumerate(inp):
-            Logger.get().write("!Computing", len(inp), "probabilities and weights:", (i+1))
+            Logger.get().write(
+                "!Computing", len(inp), "probabilities and weights:", (i+1)
+            )
             for j, cls in enumerate(self.classifiers_):
                 prob = cls.predict_proba(x)[0]
                 if not self.use_prob:
@@ -128,10 +144,14 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                     prob = numpy.zeros_like(prob)
                     prob[max_index] = 1
                 self.precomputed_probs_[i][j] = prob
-            self.precomputed_weights_[i] = self.weighting_strategy.weight_estimators(x)
+            self.precomputed_weights_[i] = (
+                self.weighting_strategy.weight_estimators(x)
+            )
             if self.multiply_by_weight:
                 for j in range(len(self.classifiers_)):
-                    self.precomputed_probs_[i][j] *= self.precomputed_weights_[i][j]
+                    self.precomputed_probs_[i][j] *= (
+                        self.precomputed_weights_[i][j]
+                    )
 
     def get_directory(self):
         custom_state = self.random_state
@@ -147,7 +167,9 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
         return self.get_directory() + "/ensemble"
 
     def __eq__(self, other):
-        return isinstance(other, ResilientEnsemble) and self.get_directory() == other.get_directory()
+        return isinstance(other, ResilientEnsemble) and (
+            self.get_directory() == other.get_directory()
+        )
 
     def __hash__(self):
         return hash(self.get_directory())
