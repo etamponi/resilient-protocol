@@ -20,7 +20,7 @@ standard_pipeline = Pipeline(
 )
 
 
-def generalized_exponential_ensemble(
+def generalized_exponential_resilient_forest(
         n_estimators, inner_estimators, max_features, precision, power,
         pipeline=minmax_pipeline, weighting_power=None, random_sample=None,
         criterion="entropy"):

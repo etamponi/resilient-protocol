@@ -41,6 +41,7 @@ class TrainingStrategy(BaseEstimator):
                     p=sample_weights, replace=True
                 )
                 sample_weights = numpy.bincount(ix, minlength=len(y))
+                sample_weights /= sample_weights.sum()
             Logger.get().write("!Training estimator:", (i+1))
             est = self._make_estimator(inp, y, sample_weights, random_state)
             weighting_strategy.add_estimator(est, inp, y, sample_weights)

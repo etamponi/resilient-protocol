@@ -42,7 +42,7 @@ def main():
     parser.add_argument("-cv", "--cross-validation",
                         default="not_nested_10fold")
     parser.add_argument("-eg", "--ensemble-generator",
-                        default="generalized_exponential_ensemble")
+                        default="generalized_exponential_resilient_forest")
     parser.add_argument("-rd", "--results-dir", default="./results")
     parser.add_argument("-dd", "--datasets-dir", default="./datasets")
     parser.add_argument("-gm", "--generator-module",
