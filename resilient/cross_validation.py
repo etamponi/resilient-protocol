@@ -39,7 +39,8 @@ class NestedStratifiedKFold(CrossValidation):
         random_state = check_random_state(self.seed)
         for run in xrange(self.n_runs):
             shuffled_y = y[random_state.permutation(len(y))]
-            for train_indices, test_indices in StratifiedKFold(shuffled_y, n_folds=self.n_folds):
+            inner_cv = StratifiedKFold(shuffled_y, n_folds=self.n_folds)
+            for train_indices, test_indices in inner_cv:
                 seed = random_state.randint(numpy.iinfo(numpy.int32).max)
                 yield seed, train_indices, test_indices
 
