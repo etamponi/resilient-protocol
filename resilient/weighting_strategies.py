@@ -50,7 +50,9 @@ class CentroidBasedWeightingStrategy(WeightingStrategy):
         self.centroids_ = []
 
     def add_estimator(self, est, inp, y, sample_weights):
-        self.centroids_.append(numpy.average(inp, axis=0, weights=sample_weights))
+        self.centroids_.append(
+            numpy.average(inp, axis=0, weights=sample_weights)
+        )
 
     def weight_estimators(self, x):
         scores = self.pdf.probabilities(self.centroids_, mean=x)

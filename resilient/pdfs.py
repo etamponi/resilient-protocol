@@ -41,7 +41,9 @@ class DistanceNormal(PDF):
         self.precision = precision
 
     def probability(self, x):
-        return cmath.exp(-0.5 * self.precision * distance.sqeuclidean(x, self.mean)).real
+        return cmath.exp(
+            -0.5 * self.precision * distance.sqeuclidean(x, self.mean)
+        ).real
 
 
 class DistanceExponential(PDF):
@@ -62,7 +64,9 @@ class DistanceGeneralizedExponential(PDF):
         self.power = power
 
     def probability(self, x):
-        return cmath.exp(-0.5 * self.precision * distance.euclidean(x, self.mean)**self.power).real
+        return cmath.exp(
+            -0.5 * self.precision * distance.euclidean(x, self.mean)**self.power
+        ).real
 
 
 class DistanceInverse(PDF):
