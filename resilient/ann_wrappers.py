@@ -1,6 +1,5 @@
 """
-Wraps the Multilayer Perceptron implementation present in PyBrain so that it can
-be used as a scikit-learn estimator.
+Wraps various ANN implementations so that they can be used as an estimator.
 """
 from abc import ABCMeta, abstractmethod
 from itertools import izip
@@ -47,7 +46,8 @@ class ANNWrapper(BaseEstimator, ClassifierMixin):
             p = self.activate(x)
             if p.min() < 0:
                 p = p - p.min()
-            p = p / p.sum()
+            if p.sum() > 0:
+                p = p / p.sum()
             probs[i] = p
         preprocessing.normalize(probs, norm="l1", copy=False)
         return probs
