@@ -23,7 +23,7 @@ standard_pipeline = Pipeline(
 def generalized_exponential_resilient_forest(
         n_estimators, inner_estimators, max_features, precision, power,
         pipeline=minmax_pipeline, weighting_power=None, random_sample=None,
-        criterion="entropy"):
+        criterion="entropy", max_depth=None):
     if weighting_power is None:
         weighting_power = 1
         multiply_by_weight = False
@@ -38,7 +38,8 @@ def generalized_exponential_resilient_forest(
                 bootstrap=False,
                 n_estimators=inner_estimators,
                 max_features=max_features,
-                criterion=criterion
+                criterion=criterion,
+                max_depth=max_depth
             ),
             train_set_generator=
             train_set_generators.RandomCentroidPDFTrainSetGenerator(

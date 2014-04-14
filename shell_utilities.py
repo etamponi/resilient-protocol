@@ -71,12 +71,14 @@ def get_ensemble_experiments(
     return experiments
 
 
-def get_all_experiments(results_dir="./results"):
+def get_all_experiments(dataset_prefix="", results_dir="./results"):
     experiments = {}
     for ens in get_tested_ensembles(results_dir):
-        experiments[ens] = get_ensemble_experiments(
-            ens, "", selection_cls=None, results_dir=results_dir
+        exps = get_ensemble_experiments(
+            ens, dataset_prefix, selection_cls=None, results_dir=results_dir
         )
+        if len(exp) > 0:
+            experiments[ens] = exps
     return experiments
 
 
