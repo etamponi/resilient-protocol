@@ -33,18 +33,19 @@ class TrainingStrategy(BaseEstimator):
         weight_generator = self.train_set_generator.get_sample_weights(
             n, inp, y, random_state
         )
-        for i, sample_weights in enumerate(weight_generator):
+        for i, weights in enumerate(weight_generator):
             if self.random_sample is not None:
                 ix = random_state.choice(
                     len(y),
                     size=int(self.random_sample*len(y)),
-                    p=sample_weights, replace=True
+                    p=weights, replace=True
                 )
-                sample_weights = numpy.bincount(ix, minlength=len(y))
-                sample_weights /= sample_weights.sum()
+                weights = numpy.bincount(ix, minlength=len(y))
+                s = weights.sum()
+                weights = numpy.array([float(w) / s for w in weights])
             Logger.get().write("!Training estimator:", (i+1))
-            est = self._make_estimator(inp, y, sample_weights, random_state)
-            weighting_strategy.add_estimator(est, inp, y, sample_weights)
+            est = self._make_estimator(inp, y, weights, random_state)
+            weighting_strategy.add_estimator(est, inp, y, weights)
             classifiers.append(est)
         return classifiers
 

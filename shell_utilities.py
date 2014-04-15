@@ -77,7 +77,7 @@ def get_all_experiments(dataset_prefix="", results_dir="./results"):
         exps = get_ensemble_experiments(
             ens, dataset_prefix, selection_cls=None, results_dir=results_dir
         )
-        if len(exp) > 0:
+        if len(exps) > 0:
             experiments[ens] = exps
     return experiments
 
@@ -96,13 +96,17 @@ def get_threshold_range(experiment):
     )
 
 
-def plot_experiments(experiments,
+def plot_experiments(experiments, labels=None,
                      plot_average=False, scoring=confusion_to_accuracy):
     pyplot.hold(True)
-    for exp in experiments:
+    for i, exp in enumerate(experiments):
         x = get_threshold_range(exp)
         scores = results_to_scores(exp["results"], scoring)
-        pyplot.plot(x, scores.mean(axis=0), label=exp["dataset_name"])
+        if labels is not None and len(labels) > i:
+            label = labels[i]
+        else:
+            label = "{} {}".format(exp["dataset_name"], i+1)
+        pyplot.plot(x, scores.mean(axis=0), label=label)
     if plot_average:
         x = get_threshold_range(experiments[0])
         scores = results_to_scores(

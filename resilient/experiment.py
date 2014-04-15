@@ -70,7 +70,7 @@ def _run_cv_iter((ensemble, selection_strategy, inp, y,
         ensemble.selection_strategy.threshold = threshold
         Logger.get().write("!Testing using threshold: {:.3f}".format(threshold))
         confusion_matrices[i] = confusion_matrix(
-            ensemble.predict(test_inp), test_y
+            test_y, ensemble.predict(test_inp), labels=ensemble.classes_
         )
     return confusion_matrices
 
@@ -164,7 +164,7 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
 
     best_score_index_per_iter = scores.argmax(axis=1)
     best_score_per_iter = scores[
-        range(cross_validation.total_runs()), best_score_index_per_iter
+        range(scores.shape[0]), best_score_index_per_iter
     ]
     best_param_per_iter = threshold_range[best_score_index_per_iter]
     Logger.get().write(HORIZ_LINE)
@@ -191,4 +191,4 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
                       cross_validation=cross_validation)
 
     Logger.get().clear()
-    return data
+    return get_data(filename)
