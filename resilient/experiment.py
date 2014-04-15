@@ -2,9 +2,9 @@ from multiprocessing import Pool
 import os
 import signal
 import cPickle
+import numpy
 
 import arff
-import numpy
 from sklearn import clone
 from sklearn.externals.joblib.parallel import multiprocessing
 from sklearn.metrics.metrics import confusion_matrix

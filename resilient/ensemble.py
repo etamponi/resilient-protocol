@@ -1,6 +1,6 @@
 import hashlib
-
 import numpy
+
 from sklearn.base import BaseEstimator, ClassifierMixin, clone
 from sklearn.tree.tree import DecisionTreeClassifier
 from sklearn.utils.fixes import unique

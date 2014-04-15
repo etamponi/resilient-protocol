@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-
 import numpy
+
 from sklearn.base import BaseEstimator
 from sklearn.cross_validation import StratifiedKFold, KFold
 from sklearn.utils import check_random_state

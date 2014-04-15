@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-
 import numpy
+
 from sklearn.base import BaseEstimator
 
 

@@ -1,10 +1,8 @@
 from sklearn import preprocessing
 from sklearn.ensemble.forest import RandomForestClassifier
-
 from sklearn.pipeline import Pipeline
 
 from resilient import train_set_generators, pdfs, weighting_strategies
-
 from resilient.ensemble import ResilientEnsemble, TrainingStrategy
 
 

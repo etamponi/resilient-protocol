@@ -10,7 +10,6 @@ from itertools import izip
 import numpy
 
 from ffnet.ffnet import ffnet, mlgraph, imlgraph
-
 from pybrain.datasets.importance import ImportanceDataSet
 from pybrain.structure.modules.linearlayer import LinearLayer
 from pybrain.structure.modules.sigmoidlayer import SigmoidLayer

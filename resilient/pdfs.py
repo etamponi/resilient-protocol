@@ -1,8 +1,8 @@
 from abc import ABCMeta, abstractmethod
 import cmath
-
 import numpy
 from scipy.spatial import distance
+
 from sklearn.base import BaseEstimator
 
 
