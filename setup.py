@@ -8,5 +8,7 @@ setup(
     license='',
     author='Emanuele Tamponi',
     author_email='emanuele.tamponi@gmail.com',
-    description='Resilient Ensemble implementation using scikit-learn'
+    description='Resilient Ensemble implementation using scikit-learn',
+    requires=['ffnet', 'numpy', 'pybrain'],
+    scripts=['experiment_launcher']
 )
