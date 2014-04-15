@@ -46,10 +46,11 @@ def main():
     parser.add_argument("-rd", "--results-dir", default="./results")
     parser.add_argument("-dd", "--datasets-dir", default="./datasets")
     parser.add_argument("-gm", "--generator-module",
-                        default="configs.ensembles")
+                        default="resilient.configs.ensembles")
     parser.add_argument("-sm", "--selection-module",
-                        default="configs.selections")
-    parser.add_argument("-cm", "--crossval-module", default="configs.crossvals")
+                        default="resilient.configs.selections")
+    parser.add_argument("-cm", "--crossval-module",
+                        default="resilient.configs.crossvals")
     parser.add_argument("-a", "--async", action="store_true")
     args = parser.parse_args()
 

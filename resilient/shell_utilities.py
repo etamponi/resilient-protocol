@@ -11,13 +11,13 @@ from matplotlib.font_manager import FontProperties
 from resilient.experiment import *
 
 # noinspection PyUnresolvedReferences
-from configs import ensembles, crossvals, selections
+from resilient.configs import ensembles, crossvals, selections
 # noinspection PyUnresolvedReferences
-from configs.ensembles import *
+from resilient.configs.ensembles import *
 # noinspection PyUnresolvedReferences
-from configs.crossvals import *
+from resilient.configs.crossvals import *
 # noinspection PyUnresolvedReferences
-from configs.selections import *
+from resilient.configs.selections import *
 from resilient.result_analysis import *
 from resilient.cross_validation import *
 
