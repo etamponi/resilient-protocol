@@ -1,5 +1,9 @@
 """
 Wraps various ANN implementations so that they can be used as an estimator.
+
+ATTENTION!!! Actually this module needs some modifications in the libraries it
+uses, since they do not use a proper way to seed the random number generator.
+Thus it will not run using vanilla ffnet and pybrain.
 """
 from abc import ABCMeta, abstractmethod
 from itertools import izip
@@ -62,7 +66,7 @@ class PyBrainNetwork(ANNWrapper):
     def __init__(self, hidden_neurons=None, output_class="softmax",
                  learning_rate=0.01, lr_decay=1.0, momentum=0.0,
                  weight_decay=0.0, max_epochs=None, continue_epochs=10,
-                 validation_percent=0.25, fast=True, random_state=None):
+                 validation_percent=0.25, random_state=None):
         super(PyBrainNetwork, self).__init__()
         self.hidden_neurons = hidden_neurons
         self.output_class = output_class
@@ -74,7 +78,6 @@ class PyBrainNetwork(ANNWrapper):
         self.continue_epochs = continue_epochs
         self.validation_percent = validation_percent
         self.random_state = random_state
-        self.fast = fast
         self.network_ = None
         self.trainer_ = None
 
@@ -102,7 +105,7 @@ class PyBrainNetwork(ANNWrapper):
             hidden_neurons = self.hidden_neurons
         self.network_ = buildNetwork(
             n_features, hidden_neurons, self.n_classes_,
-            outclass=self._get_output_class(), fast=self.fast
+            outclass=self._get_output_class()
         )
 
         # Set the initial parameters in a repeatable way
