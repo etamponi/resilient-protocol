@@ -10,7 +10,8 @@ setup(
     author_email='emanuele.tamponi@gmail.com',
     description='Resilient Ensemble implementation using scikit-learn',
     install_requires=[
-        'ffnet', 'numpy', 'pybrain', 'matplotlib', 'scikit-learn', 'scipy'
+        'ffnet', 'numpy', 'pybrain', 'matplotlib', 'scikit-learn', 'scipy',
+        'liac-arff'
     ],
     scripts=['experiment-launcher']
 )
