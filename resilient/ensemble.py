@@ -156,13 +156,13 @@ class ResilientEnsemble(BaseEstimator, ClassifierMixin):
                     )
 
     def get_directory(self):
-        custom_state = self.random_state
-        custom_selection = self.selection_strategy
+        current_state = self.random_state
+        current_selection = self.selection_strategy
         self.random_state = None
         self.selection_strategy = None
-        filename = hashlib.md5(repr(self)).hexdigest()
-        self.random_state = custom_state
-        self.selection_strategy = custom_selection
+        filename = hashlib.md5(str(self)).hexdigest()
+        self.random_state = current_state
+        self.selection_strategy = current_selection
         return filename
 
     def get_filename(self):

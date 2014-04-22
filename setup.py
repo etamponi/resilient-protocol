@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='resilient-protocol',
-    version='0.2',
+    version='0.3',
     packages=['resilient', 'resilient.configs'],
     url='https://github.com/etamponi/resilient-protocol',
     license='GPLv2',
