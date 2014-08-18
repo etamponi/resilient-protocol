@@ -29,3 +29,13 @@ def results_to_scores(results, confusion_to_score=confusion_to_accuracy):
         for t in xrange(trials):
             scores[it, t] = confusion_to_score(results[it, t])
     return scores
+
+
+def results_to_sizes(results):
+    sizes = numpy.array([matrix.sum() for matrix in results[:, 0]])
+    return sizes
+
+
+def average_scores(results, confusion_to_score=confusion_to_accuracy):
+    return numpy.average(results_to_scores(results, confusion_to_score),
+                         axis=0, weights=results_to_sizes(results))

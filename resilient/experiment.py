@@ -10,7 +10,8 @@ from sklearn.externals.joblib.parallel import multiprocessing
 from sklearn.metrics.metrics import confusion_matrix
 
 from resilient.logger import Logger
-from resilient.result_analysis import results_to_scores, confusion_to_accuracy
+from resilient.result_analysis import results_to_scores, confusion_to_accuracy,\
+    average_scores
 
 
 __author__ = 'Emanuele Tamponi <emanuele.tamponi@diee.unica.it>'
@@ -155,10 +156,11 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
         ensemble.n_estimators
     )
     scores = results_to_scores(results, confusion_to_accuracy)
+    avg_scores = average_scores(results, confusion_to_accuracy)
     for i, row in enumerate(numpy.transpose(scores)):
         Logger.get().write(
             "{:11.3f}: {} - Mean score: {:.3f}".format(
-                threshold_range[i], row, row.mean()
+                threshold_range[i], row, avg_scores[i]
             )
         )
 
@@ -173,14 +175,12 @@ def run_experiment(ensemble, selection_strategy, dataset_name, cross_validation,
         best_score_per_iter, best_score_per_iter.mean()
     ))
     Logger.get().write(HORIZ_LINE)
-    mean_score_per_param = scores.mean(axis=0)
-    best_mean_score_param = threshold_range[mean_score_per_param.argmax()]
-    best_mean_score_row = scores[:, mean_score_per_param.argmax()]
+    best_avg_score_param = threshold_range[avg_scores.argmax()]
+    best_avg_score_row = scores[:, avg_scores.argmax()]
     Logger.get().write(
         "Best mean s: {} - Best of mean scores: {:.3f} (threshold = {:.3f})"
         .format(
-            best_mean_score_row, best_mean_score_row.mean(),
-            best_mean_score_param
+            best_avg_score_row, avg_scores.max(), best_avg_score_param
         )
     )
     Logger.get().write(HORIZ_LINE)
