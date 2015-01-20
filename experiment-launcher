@@ -21,7 +21,7 @@ The -a option activates the multiprocessing module and runs your experiments
 asynchronously.
 """
 
-from IPython.external import argparse
+import argparse
 
 from resilient.experiment import run_experiment
 
